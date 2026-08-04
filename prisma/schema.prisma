@@ -1,0 +1,367 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  STUDENT
+}
+
+enum Difficulty {
+  BEGINNER
+  INTERMEDIATE
+}
+
+enum TaskType {
+  VIDEO
+  READING
+  QUIZ
+  CODING
+  REVISION
+}
+
+enum TaskStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  SKIPPED
+}
+
+enum InsightStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  RESCHEDULED
+}
+
+enum RiskType {
+  MASTERY_GAP
+  CODING_GAP
+  INACTIVITY_RISK
+  SCHEDULE_RISK
+  ACCELERATION_OPPORTUNITY
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          UserRole  @default(STUDENT)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts       Account[]
+  sessions       Session[]
+  studentProfile StudentProfile?
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model StudentProfile {
+  id             String     @id @default(cuid())
+  userId         String     @unique
+  domain         String?
+  currentLevel   Difficulty @default(BEGINNER)
+  weeklyHours    Int        @default(5)
+  targetWeeks    Int        @default(4)
+  learningStyle  String     @default("balanced")
+  currentStreak  Int        @default(0)
+  longestStreak  Int        @default(0)
+  lastActiveDate DateTime?
+  totalMinutes   Int        @default(0)
+  onboardingDone Boolean    @default(false)
+
+  learningGoal        String?
+  preferredDifficulty Difficulty @default(BEGINNER)
+  preferredSubjects   String?    @db.Text
+  notifyEmail         Boolean    @default(true)
+  notifyInsights      Boolean    @default(true)
+  notifyStreaks       Boolean    @default(true)
+  themePreference     String     @default("dark")
+
+  learningPace           String  @default("standard")
+  notifyTaskReminders    Boolean @default(true)
+  notifyInactivityNudges Boolean @default(true)
+  contentStyle           String  @default("balanced")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  learningPlan      LearningPlan?
+  activityLogs      ActivityLog[]
+  notifications     Notification[]
+  quizAttempts      QuizAttempt[]
+  codingSubmissions CodingSubmission[]
+  agentInsights     AgentInsight[]
+
+  @@map("student_profiles")
+}
+
+model Track {
+  id             String     @id @default(cuid())
+  title          String
+  slug           String     @unique
+  description    String     @db.Text
+  difficulty     Difficulty @default(BEGINNER)
+  estimatedHours Int        @default(20)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  resources     Resource[]
+  questions     Question[]
+  learningPlans LearningPlan[]
+
+  @@map("tracks")
+}
+
+model Resource {
+  id               String     @id @default(cuid())
+  trackId          String
+  topic            String
+  title            String
+  youtubeUrl       String     @unique
+  orderIndex       Int        @default(0)
+  estimatedMinutes Int        @default(15)
+  difficulty       Difficulty @default(BEGINNER)
+  description      String?    @db.Text
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  track         Track          @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  learningTasks LearningTask[]
+
+  @@index([trackId, topic, difficulty])
+  @@map("resources")
+}
+
+model LearningPlan {
+  id               String   @id @default(cuid())
+  studentProfileId String   @unique
+  trackId          String
+  goal             String
+  targetDuration   Int
+  overallProgress  Float    @default(0)
+  plannedMinutes   Int      @default(0)
+  completedMinutes Int      @default(0)
+  startDate        DateTime @default(now())
+  endDate          DateTime
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  track          Track          @relation(fields: [trackId], references: [id])
+  milestones     Milestone[]
+
+  @@index([trackId])
+  @@map("learning_plans")
+}
+
+model Milestone {
+  id             String   @id @default(cuid())
+  learningPlanId String
+  title          String
+  weekNumber     Int
+  description    String?  @db.Text
+  isCompleted    Boolean  @default(false)
+  dueDate        DateTime
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  learningPlan LearningPlan   @relation(fields: [learningPlanId], references: [id], onDelete: Cascade)
+  tasks        LearningTask[]
+
+  @@index([learningPlanId, weekNumber])
+  @@map("milestones")
+}
+
+model LearningTask {
+  id               String     @id @default(cuid())
+  milestoneId      String
+  resourceId       String?
+  title            String
+  topic            String
+  taskType         TaskType
+  status           TaskStatus @default(NOT_STARTED)
+  estimatedMinutes Int        @default(15)
+  actualMinutes    Int?
+  dueDate          DateTime
+  orderIndex       Int        @default(0)
+  description      String?    @db.Text
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  milestone Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  resource  Resource? @relation(fields: [resourceId], references: [id])
+
+  @@index([milestoneId, orderIndex])
+  @@index([resourceId])
+  @@map("learning_tasks")
+}
+
+model Question {
+  id            String  @id @default(cuid())
+  trackId       String
+  topic         String
+  questionType  String  @default("MCQ")
+  questionText  String  @db.Text @unique
+  options       String? @db.Text
+  correctOption Int?
+  explanation   String? @db.Text
+
+  codeDescription  String? @db.Text
+  sampleInput      String? @db.Text
+  sampleOutput     String? @db.Text
+  constraints      String? @db.Text
+  hints            String? @db.Text
+  starterCode      String? @db.Text
+  expectedKeywords String? @db.Text
+
+  difficulty Difficulty @default(BEGINNER)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  track             Track              @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  quizAttempts      QuizAttempt[]
+  codingSubmissions CodingSubmission[]
+
+  @@index([trackId, topic, difficulty, questionType])
+  @@map("questions")
+}
+
+model QuizAttempt {
+  id               String   @id @default(cuid())
+  studentProfileId String
+  questionId       String
+  selectedOption   Int?
+  isCorrect        Boolean  @default(false)
+  score            Float    @default(0)
+  feedback         String?  @db.Text
+  createdAt        DateTime @default(now())
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  question       Question       @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([studentProfileId, createdAt])
+  @@index([questionId])
+  @@map("quiz_attempts")
+}
+
+model CodingSubmission {
+  id               String   @id @default(cuid())
+  studentProfileId String
+  questionId       String
+  code             String   @db.Text
+  language         String
+  result           String?  @db.Text
+  score            Float    @default(0)
+  feedback         String?  @db.Text
+  passed           Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  question       Question       @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([studentProfileId, createdAt])
+  @@index([questionId])
+  @@map("coding_submissions")
+}
+
+model AgentInsight {
+  id                 String        @id @default(cuid())
+  studentProfileId   String
+  riskType           RiskType
+  priority           Int           @default(1)
+  signal             String        @db.Text
+  explanation        String        @db.Text
+  recommendedChanges String        @db.Text
+  status             InsightStatus @default(PENDING)
+  learnerDecision    String?
+  decisionReason     String?       @db.Text
+  resolvedAt         DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  @@index([studentProfileId, status])
+  @@map("agent_insights")
+}
+
+model Notification {
+  id               String   @id @default(cuid())
+  studentProfileId String
+  title            String
+  message          String   @db.Text
+  type             String   @default("info")
+  isRead           Boolean  @default(false)
+  actionUrl        String?
+  createdAt        DateTime @default(now())
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  @@index([studentProfileId, isRead, createdAt])
+  @@map("notifications")
+}
+
+model ActivityLog {
+  id               String   @id @default(cuid())
+  studentProfileId String
+  action           String
+  details          String?  @db.Text
+  minutesSpent     Int      @default(0)
+  createdAt        DateTime @default(now())
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  @@index([studentProfileId, createdAt])
+  @@map("activity_logs")
+}
