@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { TaskType } from "@prisma/client";
+import { createNotificationIfNeeded } from "@/lib/notifications";
 
 const insightResponseSchema = z.object({
   insightId: z.string().min(1),
@@ -44,6 +45,17 @@ export async function POST(req: NextRequest) {
 
     if (!insight || insight.studentProfileId !== profile.id) {
       return NextResponse.json({ error: "Insight not found" }, { status: 404 });
+    }
+
+    // Idempotency guard: an already-resolved insight must not be processed
+    // again (double-click / retry would otherwise re-apply plan changes and
+    // create duplicate "Learning Plan Updated" notifications).
+    if (insight.status !== "PENDING") {
+      return NextResponse.json({
+        success: true,
+        alreadyHandled: true,
+        decision: insight.status,
+      });
     }
 
     // Update insight status
@@ -121,15 +133,13 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      // Create notification
-      await prisma.notification.create({
-        data: {
-          studentProfileId: profile.id,
-          title: "✅ Learning Plan Updated",
-          message: `Your learning plan has been updated based on the ${insight.riskType.replace("_", " ").toLowerCase()} insight. New tasks have been added to help you progress.`,
-          type: "success",
-          actionUrl: "/student/plan",
-        },
+      // Create notification (deduped)
+      await createNotificationIfNeeded({
+        studentProfileId: profile.id,
+        title: "✅ Learning Plan Updated",
+        message: `Your learning plan has been updated based on the ${insight.riskType.replace("_", " ").toLowerCase()} insight. New tasks have been added to help you progress.`,
+        type: "success",
+        actionUrl: "/student/plan",
       });
     } else if (decision === "REJECTED") {
       await prisma.activityLog.create({
@@ -148,14 +158,12 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      await prisma.notification.create({
-        data: {
-          studentProfileId: profile.id,
-          title: "📅 Recommendation Rescheduled",
-          message: `You chose to reschedule the ${insight.riskType.replace("_", " ").toLowerCase()} recommendation. We'll check back later.`,
-          type: "info",
-          actionUrl: "/student/dashboard",
-        },
+      await createNotificationIfNeeded({
+        studentProfileId: profile.id,
+        title: "📅 Recommendation Rescheduled",
+        message: `You chose to reschedule the ${insight.riskType.replace("_", " ").toLowerCase()} recommendation. We'll check back later.`,
+        type: "info",
+        actionUrl: "/student/dashboard",
       });
     }
 

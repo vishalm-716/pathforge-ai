@@ -24,7 +24,15 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
-  // API routes pass through
+  // Admin API routes — defense-in-depth on top of each route's own requireAdmin()
+  if (pathname.startsWith("/api/admin")) {
+    if (!isLoggedIn || role !== "ADMIN") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    return NextResponse.next();
+  }
+
+  // Other API routes pass through (each route enforces its own auth)
   if (pathname.startsWith("/api/")) {
     return NextResponse.next();
   }

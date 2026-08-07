@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generatePlanWithResources, getDomainDisplayName } from "@/lib/agent/plan-generator";
+import { createNotificationIfNeeded } from "@/lib/notifications";
 import { z } from "zod";
 import { Difficulty } from "@prisma/client";
 
@@ -144,15 +145,13 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // ── Notification ──────────────────────────────────────────
-    await prisma.notification.create({
-      data: {
-        studentProfileId: profile.id,
-        title: "🔄 Track Switched!",
-        message: `You've switched from ${oldTrackTitle} to ${getDomainDisplayName(data.domain)}. Your new personalized plan is ready!`,
-        type: "info",
-        actionUrl: "/student/plan",
-      },
+    // ── Notification (deduped — no repeated "Track Switched" alerts) ─
+    await createNotificationIfNeeded({
+      studentProfileId: profile.id,
+      title: "🔄 Track Switched!",
+      message: `You've switched from ${oldTrackTitle} to ${getDomainDisplayName(data.domain)}. Your new personalized plan is ready!`,
+      type: "info",
+      actionUrl: "/student/plan",
     });
 
     return NextResponse.json({ success: true, planId: plan.id });

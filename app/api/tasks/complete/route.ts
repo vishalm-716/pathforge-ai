@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { detectRisks } from "@/lib/agent/rules";
+import { recordActivity } from "@/lib/activity";
+import { hasRecentInsight } from "@/lib/notifications";
+import { requiredWatchMinutes } from "@/lib/constants";
 import { z } from "zod";
 
 const completeTaskSchema = z.object({
@@ -34,6 +37,85 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No learning plan found" }, { status: 404 });
     }
 
+    // ── Ownership check ─────────────────────────────────────────────
+    // Only allow completing a task that actually belongs to this student's plan.
+    const task = await prisma.learningTask.findUnique({
+      where: { id: taskId },
+      select: {
+        id: true,
+        milestoneId: true,
+        status: true,
+        taskType: true,
+        estimatedMinutes: true,
+        resource: {
+          select: { youtubeUrl: true, estimatedMinutes: true },
+        },
+      },
+    });
+
+    const belongsToPlan = profile.learningPlan.milestones.some(
+      (m) => m.id === task?.milestoneId
+    );
+    if (!task || !belongsToPlan) {
+      return NextResponse.json({ error: "Task not found" }, { status: 404 });
+    }
+
+    // ── Idempotency ─────────────────────────────────────────────────
+    // A repeated "complete" request (double-click, refresh, retry) must not
+    // double-count minutes, progress, or streak.
+    if (task.status === "COMPLETED") {
+      return NextResponse.json({
+        success: true,
+        alreadyCompleted: true,
+        progress: profile.learningPlan.overallProgress,
+        streak: profile.currentStreak,
+        completedMinutes: profile.learningPlan.completedMinutes,
+      });
+    }
+
+    // ── Anti-cheat: video tasks must be genuinely opened ───────────
+    // A student must actually open the YouTube link (recorded via
+    // /api/tasks/visit) AND spend a minimum watch time before the video task
+    // can be completed. Prevents "mark complete" without watching.
+    if (task.taskType === "VIDEO" && task.resource?.youtubeUrl) {
+      const opened = await prisma.activityLog.findFirst({
+        where: {
+          studentProfileId: profile.id,
+          action: "VIDEO_OPENED",
+          details: taskId,
+        },
+        orderBy: { createdAt: "asc" },
+      });
+
+      if (!opened) {
+        return NextResponse.json(
+          {
+            error:
+              "Please open the video link first — this task can only be completed after you open the video.",
+            code: "VIDEO_NOT_OPENED",
+          },
+          { status: 400 }
+        );
+      }
+
+      const requiredMin = requiredWatchMinutes(
+        task.resource.estimatedMinutes || task.estimatedMinutes || 15
+      );
+      const elapsedMs = Date.now() - opened.createdAt.getTime();
+      const remainingMs = requiredMin * 60 * 1000 - elapsedMs;
+      if (remainingMs > 0) {
+        const remainingMin = Math.ceil(remainingMs / 60000);
+        return NextResponse.json(
+          {
+            error: `Video watch time not reached yet — please spend at least ${requiredMin} minute${requiredMin === 1 ? "" : "s"} with the video open. About ${remainingMin} more minute${remainingMin === 1 ? "" : "s"} to go.`,
+            code: "VIDEO_WATCH_TIME_NOT_MET",
+            remainingMinutes: remainingMin,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     // Update the task
     await prisma.learningTask.update({
       where: { id: taskId },
@@ -43,11 +125,15 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Update progress
+    // Update progress (task is now COMPLETED in the DB snapshot above is stale,
+    // so count the just-completed task explicitly)
     const allTasks = profile.learningPlan.milestones.flatMap((m) => m.tasks);
-    const completedCount = allTasks.filter((t) => t.status === "COMPLETED").length + 1;
+    const completedCount = allTasks.filter(
+      (t) => t.status === "COMPLETED" || t.id === taskId
+    ).length;
     const totalTasks = allTasks.length;
-    const newProgress = Math.round((completedCount / totalTasks) * 100);
+    const newProgress =
+      totalTasks > 0 ? Math.round((completedCount / totalTasks) * 100) : 0;
     const newCompletedMinutes = profile.learningPlan.completedMinutes + actualMinutes;
 
     await prisma.learningPlan.update({
@@ -58,37 +144,9 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Update streak
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const lastActive = profile.lastActiveDate
-      ? new Date(profile.lastActiveDate)
-      : null;
-    if (lastActive) lastActive.setHours(0, 0, 0, 0);
-
-    let newStreak = profile.currentStreak;
-    if (!lastActive || lastActive.getTime() < today.getTime()) {
-      if (
-        lastActive &&
-        today.getTime() - lastActive.getTime() <= 2 * 24 * 60 * 60 * 1000
-      ) {
-        newStreak += 1;
-      } else if (!lastActive) {
-        newStreak = 1;
-      } else {
-        newStreak = 1;
-      }
-    }
-
-    await prisma.studentProfile.update({
-      where: { id: profile.id },
-      data: {
-        totalMinutes: profile.totalMinutes + actualMinutes,
-        currentStreak: newStreak,
-        longestStreak: Math.max(profile.longestStreak, newStreak),
-        lastActiveDate: new Date(),
-      },
-    });
+    // Update streak + totalMinutes (idempotent per calendar day)
+    const activity = await recordActivity(profile.id, actualMinutes);
+    const newStreak = activity?.currentStreak ?? profile.currentStreak;
 
     // Log activity
     await prisma.activityLog.create({
@@ -102,8 +160,7 @@ export async function POST(req: NextRequest) {
 
     // Check milestone completion
     for (const milestone of profile.learningPlan.milestones) {
-      const milestoneTasks = milestone.tasks;
-      const milestoneCompletedAll = milestoneTasks.every(
+      const milestoneCompletedAll = milestone.tasks.every(
         (t) => t.status === "COMPLETED" || t.id === taskId
       );
       if (milestoneCompletedAll && !milestone.isCompleted) {
@@ -147,28 +204,20 @@ export async function POST(req: NextRequest) {
       latestCodingPassed: latestCoding ? latestCoding.passed : null,
     });
 
-    // Create new insights (avoid duplicates)
+    // Create new insights (dedupe by risk type + cooldown)
     for (const risk of risks) {
-      const existingInsight = await prisma.agentInsight.findFirst({
-        where: {
+      if (await hasRecentInsight(profile.id, risk.riskType)) continue;
+
+      await prisma.agentInsight.create({
+        data: {
           studentProfileId: profile.id,
           riskType: risk.riskType,
-          status: "PENDING",
+          priority: risk.priority,
+          signal: risk.signal,
+          explanation: risk.explanation,
+          recommendedChanges: JSON.stringify(risk.recommendedChanges),
         },
       });
-
-      if (!existingInsight) {
-        await prisma.agentInsight.create({
-          data: {
-            studentProfileId: profile.id,
-            riskType: risk.riskType,
-            priority: risk.priority,
-            signal: risk.signal,
-            explanation: risk.explanation,
-            recommendedChanges: JSON.stringify(risk.recommendedChanges),
-          },
-        });
-      }
     }
 
     return NextResponse.json({

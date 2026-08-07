@@ -2,13 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { detectRisks } from "@/lib/agent/rules";
+import { recordActivity } from "@/lib/activity";
+import { createNotificationIfNeeded, hasRecentInsight } from "@/lib/notifications";
 import { z } from "zod";
 
+// selectedOption may be -1 for questions the student skipped (the quiz UI
+// sends -1 when no option was chosen). -1 must not fail validation — that
+// previously made the whole submission error out with a 400.
 const quizSubmitSchema = z.object({
   answers: z.array(
     z.object({
       questionId: z.string(),
-      selectedOption: z.number().int().min(0).max(3),
+      selectedOption: z.number().int().min(-1).max(3),
     })
   ),
   topic: z.string().optional(),
@@ -24,6 +29,13 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { answers, topic } = quizSubmitSchema.parse(body);
 
+    if (answers.length === 0) {
+      return NextResponse.json(
+        { error: "No answers provided" },
+        { status: 400 }
+      );
+    }
+
     const profile = await prisma.studentProfile.findUnique({
       where: { userId: session.user.id },
     });
@@ -33,7 +45,18 @@ export async function POST(req: NextRequest) {
     }
 
     let correctCount = 0;
-    const results = [];
+    // Only questions that can actually be graded count toward the score:
+    // skipped questions count as incorrect, questions without a configured
+    // correct answer are excluded so broken questions can't skew results.
+    let gradedCount = 0;
+    const results: Array<{
+      questionId: string;
+      isCorrect: boolean;
+      explanation: string | null;
+      correctOption: number | null;
+      unanswered?: boolean;
+      notGraded?: boolean;
+    }> = [];
 
     for (const answer of answers) {
       const question = await prisma.question.findUnique({
@@ -42,10 +65,58 @@ export async function POST(req: NextRequest) {
 
       if (!question) continue;
 
+      // Skipped question (front-end sends -1) — recorded, counted as incorrect.
+      if (answer.selectedOption === -1) {
+        gradedCount++;
+        await prisma.quizAttempt.create({
+          data: {
+            studentProfileId: profile.id,
+            questionId: answer.questionId,
+            selectedOption: null,
+            isCorrect: false,
+            score: 0,
+            feedback: "You did not answer this question.",
+          },
+        });
+        results.push({
+          questionId: answer.questionId,
+          isCorrect: false,
+          explanation: null,
+          correctOption: null,
+          unanswered: true,
+        });
+        continue;
+      }
+
+      // Question with no configured correct answer cannot be graded — exclude
+      // it from the score instead of marking every answer wrong.
+      if (question.correctOption === null || question.correctOption === undefined) {
+        await prisma.quizAttempt.create({
+          data: {
+            studentProfileId: profile.id,
+            questionId: answer.questionId,
+            selectedOption: answer.selectedOption,
+            isCorrect: false,
+            score: 0,
+            feedback:
+              "This question is not graded because no correct answer is configured.",
+          },
+        });
+        results.push({
+          questionId: answer.questionId,
+          isCorrect: false,
+          explanation: question.explanation,
+          correctOption: null,
+          notGraded: true,
+        });
+        continue;
+      }
+
+      gradedCount++;
       const isCorrect = question.correctOption === answer.selectedOption;
       if (isCorrect) correctCount++;
 
-      const attempt = await prisma.quizAttempt.create({
+      await prisma.quizAttempt.create({
         data: {
           studentProfileId: profile.id,
           questionId: answer.questionId,
@@ -66,28 +137,38 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const totalQuestions = answers.length;
-    const scorePercentage = Math.round((correctCount / totalQuestions) * 100);
+    const scorePercentage =
+      gradedCount > 0
+        ? Math.round((correctCount / gradedCount) * 100)
+        : 0;
 
     // Log activity
     await prisma.activityLog.create({
       data: {
         studentProfileId: profile.id,
         action: "QUIZ_COMPLETED",
-        details: `Quiz on ${topic || "General"}: ${scorePercentage}% (${correctCount}/${totalQuestions})`,
+        details: `Quiz on ${topic || "General"}: ${scorePercentage}% (${correctCount}/${gradedCount})`,
         minutesSpent: 15,
       },
     });
 
-    // Update last active
-    await prisma.studentProfile.update({
-      where: { id: profile.id },
-      data: { lastActiveDate: new Date() },
-    });
+    // Streak + totalMinutes update (real activity — idempotent per day)
+    await recordActivity(profile.id, 15);
 
-    // Run agent risk detection for quiz score
+    // Run agent risk detection for quiz score (real weekly minutes)
+    const weekStart = new Date();
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+    weekStart.setHours(0, 0, 0, 0);
+    const weeklyLogs = await prisma.activityLog.findMany({
+      where: {
+        studentProfileId: profile.id,
+        createdAt: { gte: weekStart },
+      },
+    });
+    const totalMinutesThisWeek = weeklyLogs.reduce((sum, l) => sum + l.minutesSpent, 0);
+
     const risks = detectRisks({
-      totalMinutesThisWeek: 0,
+      totalMinutesThisWeek,
       plannedMinutesThisWeek: profile.weeklyHours * 60,
       lastActiveDate: new Date(),
       currentStreak: profile.currentStreak,
@@ -95,50 +176,42 @@ export async function POST(req: NextRequest) {
       latestCodingPassed: null,
     });
 
-    // Create insights
+    // Create insights + notifications (dedupe by risk type + cooldown)
     for (const risk of risks) {
-      const existingInsight = await prisma.agentInsight.findFirst({
-        where: {
+      if (await hasRecentInsight(profile.id, risk.riskType)) continue;
+
+      await prisma.agentInsight.create({
+        data: {
           studentProfileId: profile.id,
           riskType: risk.riskType,
-          status: "PENDING",
+          priority: risk.priority,
+          signal: risk.signal,
+          explanation: risk.explanation,
+          recommendedChanges: JSON.stringify(risk.recommendedChanges),
         },
       });
 
-      if (!existingInsight) {
-        await prisma.agentInsight.create({
-          data: {
-            studentProfileId: profile.id,
-            riskType: risk.riskType,
-            priority: risk.priority,
-            signal: risk.signal,
-            explanation: risk.explanation,
-            recommendedChanges: JSON.stringify(risk.recommendedChanges),
-          },
-        });
+      const title =
+        risk.riskType === "MASTERY_GAP"
+          ? "📚 PathForge AI: Concept Reinforcement Needed"
+          : risk.riskType === "ACCELERATION_OPPORTUNITY"
+          ? "🚀 PathForge AI: Ready for a Challenge?"
+          : "🔔 PathForge AI Insight";
 
-        // Create notification for the risk
-        await prisma.notification.create({
-          data: {
-            studentProfileId: profile.id,
-            title: risk.riskType === "MASTERY_GAP"
-              ? "📚 PathForge AI: Concept Reinforcement Needed"
-              : risk.riskType === "ACCELERATION_OPPORTUNITY"
-                ? "🚀 PathForge AI: Ready for a Challenge?"
-                : "🔔 PathForge AI Insight",
-            message: risk.explanation,
-            type: risk.riskType === "ACCELERATION_OPPORTUNITY" ? "success" : "warning",
-            actionUrl: "/student/dashboard",
-          },
-        });
-      }
+      await createNotificationIfNeeded({
+        studentProfileId: profile.id,
+        title,
+        message: risk.explanation,
+        type: risk.riskType === "ACCELERATION_OPPORTUNITY" ? "success" : "warning",
+        actionUrl: "/student/dashboard",
+      });
     }
 
     return NextResponse.json({
       success: true,
       score: scorePercentage,
       correctCount,
-      totalQuestions,
+      totalQuestions: gradedCount,
       results,
     });
   } catch (error) {

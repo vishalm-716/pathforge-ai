@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import StudentSidebar from "@/components/StudentSidebar";
+import { requiredWatchMinutes } from "@/lib/constants";
 import {
   CheckCircle2,
   Clock,
@@ -10,6 +11,7 @@ import {
   Loader2,
   ArrowLeft,
   PlayCircle,
+  ShieldCheck,
   Video,
 } from "lucide-react";
 
@@ -24,6 +26,12 @@ const difficultyStyle: Record<string, string> = {
   INTERMEDIATE: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
 };
 
+function formatCountdown(totalSeconds: number): string {
+  const m = Math.floor(totalSeconds / 60);
+  const s = Math.floor(totalSeconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
 export default function TaskDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -34,20 +42,77 @@ export default function TaskDetailPage() {
   const [minutes, setMinutes] = useState(15);
   const [completed, setCompleted] = useState(false);
   const [completeError, setCompleteError] = useState<string | null>(null);
+  const [videoOpenedAt, setVideoOpenedAt] = useState<number | null>(null);
+  const [openingVideo, setOpeningVideo] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     fetch("/api/dashboard")
       .then((r) => r.json())
-      .then((data) => {
+      .then(async (data) => {
         const allTasks =
           data.plan?.milestones?.flatMap((m: any) => m.tasks) || [];
         const found = allTasks.find((t: any) => t.id === params.id);
         setTask(found || null);
         if (found) setMinutes(found.estimatedMinutes ?? 15);
         setLoading(false);
+
+        // Restore video-visited state for VIDEO tasks (page refresh)
+        if (found?.taskType === "VIDEO" && found?.resource?.youtubeUrl) {
+          try {
+            const res = await fetch(`/api/tasks/visit?taskId=${params.id}`);
+            const v = await res.json();
+            if (v?.opened && v?.openedAt) {
+              setVideoOpenedAt(new Date(v.openedAt).getTime());
+            }
+          } catch {
+            // non-fatal — completion stays locked server-side anyway
+          }
+        }
       })
       .catch(() => setLoading(false));
   }, [params.id]);
+
+  // Tick every second while a video watch is in progress for the countdown
+  useEffect(() => {
+    if (videoOpenedAt === null) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [videoOpenedAt]);
+
+  // ── Anti-cheat: open the video link via our API, then open YouTube ──
+  const handleWatchVideo = async () => {
+    if (!task?.resource?.youtubeUrl) return;
+    setOpeningVideo(true);
+    setCompleteError(null);
+    try {
+      const res = await fetch("/api/tasks/visit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskId: params.id }),
+      });
+      const v = await res.json();
+      if (res.ok && v?.openedAt) {
+        setVideoOpenedAt(new Date(v.openedAt).getTime());
+      }
+    } catch {
+      // Even if the record call fails, still open the video; the server-side
+      // check in /api/tasks/complete remains the source of truth.
+    } finally {
+      setOpeningVideo(false);
+      window.open(task.resource.youtubeUrl, "_blank", "noopener,noreferrer");
+    }
+  };
+
+  // Remaining seconds of required watch time (0 = unlocked)
+  const videoLocked = task?.taskType === "VIDEO" && task?.resource?.youtubeUrl;
+  const requiredMin = videoLocked
+    ? requiredWatchMinutes(task.resource.estimatedMinutes || task.estimatedMinutes || 15)
+    : 0;
+  const remainingSec = videoLocked
+    ? Math.max(0, requiredMin * 60 - ((videoOpenedAt ? now - videoOpenedAt : Infinity) / 1000))
+    : 0;
+  const videoUnlocked = !videoLocked || (videoOpenedAt !== null && remainingSec <= 0);
 
   const handleComplete = async () => {
     setCompleting(true);
@@ -168,16 +233,37 @@ export default function TaskDetailPage() {
                         </span>
                       </div>
 
-                      {/* Watch link — plain <a>, never triggers task completion */}
-                      <a
-                        href={resource.youtubeUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition text-sm font-medium"
+                      {/* Watch button — records the open via /api/tasks/visit
+                          BEFORE the video opens (anti-cheat verification) */}
+                      <button
+                        onClick={handleWatchVideo}
+                        disabled={openingVideo}
+                        className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition text-sm font-medium disabled:opacity-60 disabled:cursor-wait"
                       >
-                        <ExternalLink className="w-4 h-4" />
-                        {watchLabel}
-                      </a>
+                        {openingVideo ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <ExternalLink className="w-4 h-4" />
+                        )}
+                        {openingVideo ? "Opening..." : watchLabel}
+                      </button>
+
+                      {/* Watch verification status */}
+                      {videoOpenedAt !== null && (
+                        <div className="flex items-center gap-2 text-xs text-emerald-400">
+                          <ShieldCheck className="w-4 h-4" />
+                          {remainingSec > 0 ? (
+                            <span>
+                              Video opened ✓ — completion unlocks in{" "}
+                              <span className="font-semibold tabular-nums">
+                                {formatCountdown(remainingSec)}
+                              </span>
+                            </span>
+                          ) : (
+                            <span>Video opened ✓ — watch time verified</span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ) : (
                     /* Fallback — resourceId is null or URL is empty */
@@ -217,9 +303,22 @@ export default function TaskDetailPage() {
                     />
                   </div>
 
+                  {videoLocked && !videoUnlocked && (
+                    <p className="text-sm text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3">
+                      {videoOpenedAt === null
+                        ? "Open the video link first — completion is locked until the video has been opened and the required watch time is met."
+                        : `Watch time in progress — completion unlocks in ${formatCountdown(remainingSec)}.`}
+                    </p>
+                  )}
+
                   <button
                     onClick={handleComplete}
-                    disabled={completing}
+                    disabled={completing || (videoLocked && !videoUnlocked)}
+                    title={
+                      videoLocked && !videoUnlocked
+                        ? "Complete the video watch time before marking this task complete."
+                        : undefined
+                    }
                     className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold hover:shadow-lg hover:shadow-cyan-500/25 transition-all disabled:opacity-50"
                   >
                     {completing ? (

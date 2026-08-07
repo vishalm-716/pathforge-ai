@@ -40,6 +40,27 @@ export async function PUT(req: NextRequest) {
     const body = await req.json();
     const { notificationId } = body;
 
+    if (!notificationId) {
+      return NextResponse.json({ error: "Missing notificationId" }, { status: 400 });
+    }
+
+    const profile = await prisma.studentProfile.findUnique({
+      where: { userId: session.user.id },
+      select: { id: true },
+    });
+    if (!profile) {
+      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+    }
+
+    // Ownership check — only mark your own notifications as read.
+    const notification = await prisma.notification.findUnique({
+      where: { id: notificationId },
+      select: { studentProfileId: true },
+    });
+    if (!notification || notification.studentProfileId !== profile.id) {
+      return NextResponse.json({ error: "Notification not found" }, { status: 404 });
+    }
+
     await prisma.notification.update({
       where: { id: notificationId },
       data: { isRead: true },

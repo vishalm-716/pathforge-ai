@@ -101,13 +101,28 @@ Open `http://localhost:7000` in your browser.
 
 ## Environment Setup
 
-Create a `.env` file and configure at least:
+Copy `.env.example` to `.env` and configure:
 
 ```env
 DATABASE_URL=your_postgresql_connection_string
+AUTH_SECRET=your_nextauth_secret            # generate with: npx auth secret
+AUTH_GOOGLE_ID=your_google_oauth_client_id
+AUTH_GOOGLE_SECRET=your_google_oauth_client_secret
+
+# AI features use the Freebuff API (replaces the old GEMINI_API_KEY)
+FREEBUFF_API_KEY=your_freebuff_api_key
+# Optional: FREEBUFF_API_URL, FREEBUFF_MODEL
+
+# Optional: enable the /demo hackathon page (non-production only)
+DEMO_MODE=false
 ```
 
-If your local setup also uses auth configuration or seeded credentials, add the required auth environment values before running the project.
+- **Google OAuth** is the student sign-in provider and is unchanged.
+- **Freebuff API key** powers the optional AI text features (explanation
+  enhancement, plan summary). When it is empty, the app gracefully falls back
+  to deterministic templates — no key is required to run the core experience.
+- Secrets (`DATABASE_URL`, `AUTH_SECRET`, `*_API_KEY`, `*_SECRET`) must never
+  be committed. `.gitignore` already excludes `.env*` (keeping `.env.example`).
 
 ## Database Setup
 
@@ -129,6 +144,41 @@ npx prisma db seed
 ## Project Status
 
 PathForge AI is currently positioned as a strong MVP for personalized developer learning, combining structured planning, curated content, and practical skill evaluation in one platform.
+
+## Deploying to Vercel
+
+The project deploys to Vercel **without any Prisma schema changes**.
+
+1. Push the repository to GitHub and import it in Vercel.
+2. Add environment variables in the Vercel dashboard (Production + Preview):
+   `DATABASE_URL`, `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`,
+   `FREEBUFF_API_KEY` (optional), `AUTH_TRUST_HOST=true`.
+3. `postinstall` runs `prisma generate` automatically; the build runs
+   `prisma migrate deploy` (or apply migrations manually) before `next build`.
+4. For a database migration, run `npx prisma migrate deploy` against the
+   production database (e.g. via a Vercel Postgres connection or CI step).
+
+### Deployment readiness checklist
+
+- [ ] `DATABASE_URL` points to a reachable Postgres (local or hosted).
+- [ ] `AUTH_SECRET` is a long random string (`npx auth secret`).
+- [ ] Google OAuth credentials configured and authorized redirect URIs set
+      (``https://<your-app>/api/auth/callback/google``).
+- [ ] `AUTH_TRUST_HOST=true` set on Vercel (behind the proxy).
+- [ ] `FREEBUFF_API_KEY` set if AI text features are wanted (optional).
+- [ ] `DEMO_MODE` unset/false in production (the `/demo` route is disabled).
+- [ ] Migrations applied to the production database (`prisma migrate deploy`).
+- [ ] Change the seeded admin password (`prisma/seed.ts` uses `Admin@123`)
+      before real users sign up.
+- [ ] Run `npm run typecheck` and `npm run build` locally — both must pass.
+
+## Security notes
+
+- Admin pages and `/api/admin/*` routes require an `ADMIN` role (checked in
+  middleware and in every admin route via `requireAdmin`).
+- The credentials login is rate-limited in-app (5 attempts / 15 min per
+  email); pair with a hosted rate limiter for hard guarantees.
+- The `/demo` route is disabled in production and never prints credentials.
 
 ## License
 

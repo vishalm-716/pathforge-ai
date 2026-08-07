@@ -12,6 +12,16 @@ function shuffle<T>(arr: T[]): T[] {
   return arr;
 }
 
+/** Parse stored JSON without crashing the whole endpoint on malformed data. */
+function safeJson<T>(raw: string | null, fallback: T): T {
+  if (!raw) return fallback;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}
+
 export async function GET(req: NextRequest) {
   try {
     const session = await auth();
@@ -88,7 +98,7 @@ export async function GET(req: NextRequest) {
       questions: questions.map((q) => ({
         id: q.id,
         questionText: q.questionText,
-        options: q.options ? JSON.parse(q.options) : [],
+        options: safeJson<string[]>(q.options, []),
         topic: q.topic,
         difficulty: q.difficulty,
       })),

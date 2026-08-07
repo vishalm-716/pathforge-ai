@@ -28,6 +28,7 @@ export default function QuizPage() {
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [results, setResults] = useState<any>(null);
 
   useEffect(() => {
@@ -65,22 +66,41 @@ export default function QuizPage() {
 
   const handleSubmit = async () => {
     setSubmitting(true);
+    setSubmitError(null);
     const answerArray = questions.map((q) => ({
       questionId: q.id,
       selectedOption: answers[q.id] ?? -1,
     }));
 
-    const res = await fetch("/api/quiz/submit", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ answers: answerArray, topic: questions[0]?.topic }),
-    });
+    try {
+      const res = await fetch("/api/quiz/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ answers: answerArray, topic: questions[0]?.topic }),
+      });
 
-    if (res.ok) {
-      const data = await res.json();
-      setResults(data);
+      if (res.ok) {
+        const data = await res.json();
+        setResults(data);
+      } else {
+        let msg = "Failed to submit quiz. Please try again.";
+        try {
+          const body = await res.json();
+          if (Array.isArray(body?.error)) {
+            msg = body.error.map((e: any) => e?.message || e).join("; ");
+          } else if (typeof body?.error === "string") {
+            msg = body.error;
+          }
+        } catch {
+          // keep default message
+        }
+        setSubmitError(msg);
+      }
+    } catch {
+      setSubmitError("Network error. Please check your connection and try again.");
+    } finally {
+      setSubmitting(false);
     }
-    setSubmitting(false);
   };
 
   if (loading) {
@@ -119,23 +139,31 @@ export default function QuizPage() {
               </div>
 
               <div className="space-y-4 pt-6 border-t border-slate-800">
-                {results.results.map((r: any, idx: number) => (
-                  <div key={idx} className={`p-4 rounded-xl border ${r.isCorrect ? "border-emerald-500/20 bg-emerald-500/5" : "border-red-500/20 bg-red-500/5"}`}>
-                    <div className="flex items-center gap-2 mb-2">
-                      {r.isCorrect ? (
-                        <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                      ) : (
-                        <XCircle className="w-5 h-5 text-red-400" />
+                {results.results.map((r: any, idx: number) => {
+                  // Skipped / ungradable questions are excluded from the score —
+                  // show a distinct label so feedback matches the score.
+                  const state = r.unanswered
+                    ? { label: "Not answered", color: "text-slate-400", icon: <XCircle className="w-5 h-5 text-slate-500" />, border: "border-slate-700/50 bg-slate-800/30" }
+                    : r.notGraded
+                    ? { label: "Not graded", color: "text-slate-400", icon: <XCircle className="w-5 h-5 text-slate-500" />, border: "border-slate-700/50 bg-slate-800/30" }
+                    : r.isCorrect
+                    ? { label: "Correct", color: "text-emerald-400", icon: <CheckCircle2 className="w-5 h-5 text-emerald-400" />, border: "border-emerald-500/20 bg-emerald-500/5" }
+                    : { label: "Incorrect", color: "text-red-400", icon: <XCircle className="w-5 h-5 text-red-400" />, border: "border-red-500/20 bg-red-500/5" };
+
+                  return (
+                    <div key={idx} className={`p-4 rounded-xl border ${state.border}`}>
+                      <div className="flex items-center gap-2 mb-2">
+                        {state.icon}
+                        <span className={`font-medium ${state.color}`}>
+                          Question {idx + 1}: {state.label}
+                        </span>
+                      </div>
+                      {r.explanation && (
+                        <p className="text-sm text-slate-400 ml-7">{r.explanation}</p>
                       )}
-                      <span className={`font-medium ${r.isCorrect ? "text-emerald-400" : "text-red-400"}`}>
-                        Question {idx + 1}: {r.isCorrect ? "Correct" : "Incorrect"}
-                      </span>
                     </div>
-                    {r.explanation && (
-                      <p className="text-sm text-slate-400 ml-7">{r.explanation}</p>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <button
@@ -227,6 +255,13 @@ export default function QuizPage() {
                   </button>
                 )}
               </div>
+
+              {/* Inline error on failed submission */}
+              {submitError && (
+                <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+                  {submitError}
+                </p>
+              )}
             </div>
           ) : (
             <div className="text-center py-16">

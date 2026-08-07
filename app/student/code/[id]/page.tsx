@@ -26,27 +26,57 @@ interface CodingQuestion {
   difficulty: string;
 }
 
-const languages = ["javascript", "python", "java"];
+/** Fallback starter text when a track's question ships no starter for its language. */
+function starterFallback(language: string): string {
+  if (language === "sql") return "-- Write your SQL query here\n";
+  if (language === "python") return "# Write your solution here\n";
+  return "// Write your solution here\n";
+}
 
 export default function CodePage() {
   const params = useParams();
   const router = useRouter();
   const [question, setQuestion] = useState<CodingQuestion | null>(null);
   const [loading, setLoading] = useState(true);
+  // Only the track's language is offered (server-enforced too).
+  const [languages, setLanguages] = useState<string[]>(["javascript"]);
   const [language, setLanguage] = useState("javascript");
   const [code, setCode] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [result, setResult] = useState<any>(null);
   const [showHints, setShowHints] = useState(false);
 
   useEffect(() => {
-    fetch("/api/code/questions")
+    // First resolve the task topic (like the quiz page) so the coding page
+    // shows the challenge that matches the task, not just any track question.
+    fetch("/api/dashboard")
       .then((r) => r.json())
+      .then(async (dashData) => {
+        const allTasks =
+          dashData.plan?.milestones?.flatMap((m: any) => m.tasks) || [];
+        const task = allTasks.find((t: any) => t.id === params.id);
+        const topic = task?.topic || "";
+
+        const url = topic
+          ? `/api/code/questions?topic=${encodeURIComponent(topic)}`
+          : "/api/code/questions";
+        return fetch(url).then((r) => r.json());
+      })
       .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          const q = data[0];
-          setQuestion(q);
-          setCode(q.starterCode?.[language] || "// Write your solution here\n");
+        const list = Array.isArray(data?.questions) ? data.questions : [];
+        if (list.length > 0) {
+          setQuestion(list[0]);
+          const allowed = Array.isArray(data?.languages) ? data.languages : ["javascript"];
+          setLanguages(allowed);
+          setLanguage(allowed[0]);
+          // Prefer the track's language starter; SQL questions store their
+          // starter under the generic keys, so fall back to any available key.
+          const starter =
+            list[0].starterCode?.[allowed[0]] ||
+            Object.values(list[0].starterCode || {})[0] ||
+            starterFallback(allowed[0]);
+          setCode(starter);
         }
         setLoading(false);
       })
@@ -55,23 +85,46 @@ export default function CodePage() {
 
   useEffect(() => {
     if (question) {
-      setCode(question.starterCode?.[language] || `// Write your ${language} solution here\n`);
+      setCode(
+        question.starterCode?.[language] ||
+          Object.values(question.starterCode || {})[0] ||
+          starterFallback(language)
+      );
     }
   }, [language, question]);
 
   const handleSubmit = async () => {
     if (!question) return;
     setSubmitting(true);
-    const res = await fetch("/api/code/submit", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ questionId: question.id, code, language }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setResult(data);
+    setSubmitError(null);
+    try {
+      const res = await fetch("/api/code/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ questionId: question.id, code, language }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setResult(data);
+      } else {
+        let msg = "Failed to submit code. Please try again.";
+        try {
+          const body = await res.json();
+          if (Array.isArray(body?.error)) {
+            msg = body.error.map((e: any) => e?.message || e).join("; ");
+          } else if (typeof body?.error === "string") {
+            msg = body.error;
+          }
+        } catch {
+          // keep default message
+        }
+        setSubmitError(msg);
+      }
+    } catch {
+      setSubmitError("Network error. Please check your connection and try again.");
+    } finally {
+      setSubmitting(false);
     }
-    setSubmitting(false);
   };
 
   if (loading) {
@@ -157,21 +210,27 @@ export default function CodePage() {
 
               {/* Code Editor */}
               <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
-                {/* Language Selector */}
+                {/* Language — locked to the track's language (server-enforced) */}
                 <div className="flex items-center gap-2">
                   {languages.map((lang) => (
                     <button
                       key={lang}
+                      disabled={languages.length === 1}
                       onClick={() => setLanguage(lang)}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
                         language === lang
                           ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
                           : "bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600"
-                      }`}
+                      } disabled:cursor-default`}
                     >
                       {lang.charAt(0).toUpperCase() + lang.slice(1)}
                     </button>
                   ))}
+                  {languages.length === 1 && (
+                    <span className="text-xs text-slate-500">
+                      This track is {languages[0]} only
+                    </span>
+                  )}
                 </div>
 
                 {/* Code Area */}
@@ -200,6 +259,13 @@ export default function CodePage() {
                     </>
                   )}
                 </button>
+
+                {/* Inline error on failed submission */}
+                {submitError && (
+                  <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+                    {submitError}
+                  </p>
+                )}
 
                 {/* Result */}
                 {result && (
