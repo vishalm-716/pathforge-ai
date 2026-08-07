@@ -4,7 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { detectRisks } from "@/lib/agent/rules";
 import { recordActivity } from "@/lib/activity";
 import { hasRecentInsight } from "@/lib/notifications";
-import { requiredWatchMinutes } from "@/lib/constants";
+import { requiredWatchMinutes, VIDEO_COMPLETE_PROGRESS } from "@/lib/constants";
+import { isPlaylistUrl, parseVideoProgress } from "@/lib/video";
 import { z } from "zod";
 
 const completeTaskSchema = z.object({
@@ -73,46 +74,90 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // ── Anti-cheat: video tasks must be genuinely opened ───────────
-    // A student must actually open the YouTube link (recorded via
-    // /api/tasks/visit) AND spend a minimum watch time before the video task
-    // can be completed. Prevents "mark complete" without watching.
+    // ── Anti-cheat: video tasks require real playback ──────────────
+    // Single videos are embedded with the YouTube IFrame API and heartbeat
+    // progress to /api/tasks/visit. Completion requires at least
+    // VIDEO_COMPLETE_PROGRESS (80%) of the video to have actually played,
+    // verified server-side. Playlists can't be progress-tracked, so they fall
+    // back to the older open-link + minimum dwell-time rule.
     if (task.taskType === "VIDEO" && task.resource?.youtubeUrl) {
-      const opened = await prisma.activityLog.findFirst({
-        where: {
-          studentProfileId: profile.id,
-          action: "VIDEO_OPENED",
-          details: taskId,
-        },
-        orderBy: { createdAt: "asc" },
-      });
+      const url = task.resource.youtubeUrl;
 
-      if (!opened) {
-        return NextResponse.json(
-          {
-            error:
-              "Please open the video link first — this task can only be completed after you open the video.",
-            code: "VIDEO_NOT_OPENED",
+      if (isPlaylistUrl(url)) {
+        // ── Playlist fallback: open + dwell time ────────────────
+        const opened = await prisma.activityLog.findFirst({
+          where: {
+            studentProfileId: profile.id,
+            action: "VIDEO_OPENED",
+            details: taskId,
           },
-          { status: 400 }
-        );
-      }
+          orderBy: { createdAt: "asc" },
+        });
 
-      const requiredMin = requiredWatchMinutes(
-        task.resource.estimatedMinutes || task.estimatedMinutes || 15
-      );
-      const elapsedMs = Date.now() - opened.createdAt.getTime();
-      const remainingMs = requiredMin * 60 * 1000 - elapsedMs;
-      if (remainingMs > 0) {
-        const remainingMin = Math.ceil(remainingMs / 60000);
-        return NextResponse.json(
-          {
-            error: `Video watch time not reached yet — please spend at least ${requiredMin} minute${requiredMin === 1 ? "" : "s"} with the video open. About ${remainingMin} more minute${remainingMin === 1 ? "" : "s"} to go.`,
-            code: "VIDEO_WATCH_TIME_NOT_MET",
-            remainingMinutes: remainingMin,
-          },
-          { status: 400 }
+        if (!opened) {
+          return NextResponse.json(
+            {
+              error:
+                "Please open the playlist link first — this task can only be completed after you open the video.",
+              code: "VIDEO_NOT_OPENED",
+            },
+            { status: 400 }
+          );
+        }
+
+        const requiredMin = requiredWatchMinutes(
+          task.resource.estimatedMinutes || task.estimatedMinutes || 15
         );
+        const elapsedMs = Date.now() - opened.createdAt.getTime();
+        const remainingMs = requiredMin * 60 * 1000 - elapsedMs;
+        if (remainingMs > 0) {
+          const remainingMin = Math.ceil(remainingMs / 60000);
+          return NextResponse.json(
+            {
+              error: `Playlist watch time not reached yet — please spend at least ${requiredMin} minute${requiredMin === 1 ? "" : "s"} with the playlist open. About ${remainingMin} more minute${remainingMin === 1 ? "" : "s"} to go.`,
+              code: "VIDEO_WATCH_TIME_NOT_MET",
+              remainingMinutes: remainingMin,
+            },
+            { status: 400 }
+          );
+        }
+      } else {
+        // ── Single video: require 80% verified playback ─────────
+        const progressLog = await prisma.activityLog.findFirst({
+          where: {
+            studentProfileId: profile.id,
+            action: "VIDEO_PROGRESS",
+            details: { contains: taskId },
+          },
+          // minutesSpent carries the progress value (guarded, monotonic) so
+          // ordering by it reads the authoritative max even mid-write.
+          orderBy: { minutesSpent: "desc" },
+        });
+        const progress = parseVideoProgress(progressLog?.details ?? null)?.progress ?? null;
+
+        if (progress === null || progress <= 0) {
+          return NextResponse.json(
+            {
+              error:
+                "Please watch the video in the embedded player first — this task can only be completed after at least 80% of the video has played.",
+              code: "VIDEO_NOT_OPENED",
+              requiredProgress: VIDEO_COMPLETE_PROGRESS,
+            },
+            { status: 400 }
+          );
+        }
+
+        if (progress < VIDEO_COMPLETE_PROGRESS) {
+          return NextResponse.json(
+            {
+              error: `Keep watching — completion unlocks at ${VIDEO_COMPLETE_PROGRESS}% of the video. You're at ${Math.round(progress)}%.`,
+              code: "VIDEO_PROGRESS_NOT_MET",
+              progress: Math.round(progress),
+              requiredProgress: VIDEO_COMPLETE_PROGRESS,
+            },
+            { status: 400 }
+          );
+        }
       }
     }
 
@@ -180,6 +225,9 @@ export async function POST(req: NextRequest) {
       where: {
         studentProfileId: profile.id,
         createdAt: { gte: weekStart },
+        // VIDEO_PROGRESS/VIDEO_OPENED rows carry playback progress (0-100) in
+        // minutesSpent, not real minutes — exclude them from weekly totals.
+        action: { notIn: ["VIDEO_PROGRESS", "VIDEO_OPENED"] },
       },
     });
 

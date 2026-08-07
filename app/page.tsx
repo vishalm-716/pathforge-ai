@@ -207,7 +207,7 @@ export default function HomePage() {
           <div className="flex items-center gap-2 text-slate-400 text-sm">
             <Brain className="w-4 h-4 text-cyan-400" />
             PathForge AI — Agentic AI for Human Potential
-          </div>
+          </div>    
         </div>
       </footer>
     </div>

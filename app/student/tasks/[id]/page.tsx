@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import StudentSidebar from "@/components/StudentSidebar";
-import { requiredWatchMinutes } from "@/lib/constants";
+import { requiredWatchMinutes, VIDEO_COMPLETE_PROGRESS } from "@/lib/constants";
+import { isPlaylistUrl, extractVideoId } from "@/lib/video";
 import {
   CheckCircle2,
   Clock,
@@ -13,12 +14,8 @@ import {
   PlayCircle,
   ShieldCheck,
   Video,
+  AlertTriangle,
 } from "lucide-react";
-
-// Determine whether a YouTube URL points to a playlist
-function isPlaylist(url: string): boolean {
-  return url.includes("/playlist") || url.includes("list=");
-}
 
 // Difficulty badge colour mapping
 const difficultyStyle: Record<string, string> = {
@@ -32,6 +29,25 @@ function formatCountdown(totalSeconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+// YouTube IFrame API player states
+const YT_STATE = {
+  UNSTARTED: -1,
+  ENDED: 0,
+  PLAYING: 1,
+  PAUSED: 2,
+  BUFFERING: 3,
+  CUED: 5,
+} as const;
+
+type PlayerStatus =
+  | "idle"
+  | "loading"
+  | "ready"
+  | "playing"
+  | "paused"
+  | "ended"
+  | "error";
+
 export default function TaskDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -42,6 +58,18 @@ export default function TaskDetailPage() {
   const [minutes, setMinutes] = useState(15);
   const [completed, setCompleted] = useState(false);
   const [completeError, setCompleteError] = useState<string | null>(null);
+
+  // Embedded-player state (single videos)
+  const playerBoxRef = useRef<HTMLDivElement>(null);
+  const playerRef = useRef<any>(null);
+  const openedAtRef = useRef<number | null>(null);
+  const lastSentRef = useRef(0);
+  const lastBeatRef = useRef(0);
+  const [ytApiLoaded, setYtApiLoaded] = useState(false);
+  const [playerStatus, setPlayerStatus] = useState<PlayerStatus>("idle");
+  const [verifiedProgress, setVerifiedProgress] = useState(0); // server-confirmed
+
+  // Playlist fallback state
   const [videoOpenedAt, setVideoOpenedAt] = useState<number | null>(null);
   const [openingVideo, setOpeningVideo] = useState(false);
   const [now, setNow] = useState(() => Date.now());
@@ -57,13 +85,15 @@ export default function TaskDetailPage() {
         if (found) setMinutes(found.estimatedMinutes ?? 15);
         setLoading(false);
 
-        // Restore video-visited state for VIDEO tasks (page refresh)
+        // Restore verified progress + opened state on refresh
         if (found?.taskType === "VIDEO" && found?.resource?.youtubeUrl) {
           try {
             const res = await fetch(`/api/tasks/visit?taskId=${params.id}`);
             const v = await res.json();
+            if (v?.progress) setVerifiedProgress(v.progress);
             if (v?.opened && v?.openedAt) {
-              setVideoOpenedAt(new Date(v.openedAt).getTime());
+              openedAtRef.current = new Date(v.openedAt).getTime();
+              setVideoOpenedAt(openedAtRef.current);
             }
           } catch {
             // non-fatal — completion stays locked server-side anyway
@@ -73,14 +103,140 @@ export default function TaskDetailPage() {
       .catch(() => setLoading(false));
   }, [params.id]);
 
-  // Tick every second while a video watch is in progress for the countdown
+  // ── Load the YouTube IFrame API once ────────────────────────────
   useEffect(() => {
-    if (videoOpenedAt === null) return;
+    if (typeof window === "undefined") return;
+    const w = window as any;
+    if (w.YT && w.YT.Player) {
+      setYtApiLoaded(true);
+      return;
+    }
+    if (document.getElementById("yt-iframe-api")) return;
+    const tag = document.createElement("script");
+    tag.id = "yt-iframe-api";
+    tag.src = "https://www.youtube.com/iframe_api";
+    w.onYouTubeIframeAPIReady = () => setYtApiLoaded(true);
+    document.head.appendChild(tag);
+  }, []);
+
+  // Send a heartbeat to the server (progress + watched seconds).
+  const sendHeartbeat = async (progress: number, secondsWatched: number) => {
+    try {
+      const res = await fetch("/api/tasks/visit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskId: params.id, progress, secondsWatched }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (typeof data.progress === "number") {
+          setVerifiedProgress((p) => Math.max(p, data.progress));
+        }
+        lastSentRef.current = progress;
+        lastBeatRef.current = Date.now();
+      }
+    } catch {
+      // transient — the next tick will retry
+    }
+  };
+
+  // Create the embedded player once the API + videoId are available.
+  const videoId = task?.resource?.youtubeUrl
+    ? extractVideoId(task.resource.youtubeUrl)
+    : null;
+  const embeddable = !!videoId && !isPlaylistUrl(task?.resource?.youtubeUrl ?? "");
+
+  useEffect(() => {
+    if (!ytApiLoaded || !embeddable || playerRef.current) return;
+    const w = window as any;
+    if (!w.YT?.Player || !playerBoxRef.current) return;
+
+    const player = new w.YT.Player(playerBoxRef.current, {
+      videoId,
+      playerVars: { rel: 0, modestbranding: 1, playsinline: 1 },
+      events: {
+        onReady: () => setPlayerStatus("ready"),
+        onError: () => setPlayerStatus("error"),
+        onStateChange: (e: any) => {
+          const state: number = e?.data;
+          if (state === YT_STATE.PLAYING) {
+            setPlayerStatus("playing");
+            // Record the open on first playback start (server rejects
+            // heartbeats before the video has been opened).
+            if (openedAtRef.current === null) {
+              fetch("/api/tasks/visit", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ taskId: params.id }),
+              })
+                .then((r) => r.json())
+                .then((v) => {
+                  if (v?.openedAt) {
+                    const t = new Date(v.openedAt).getTime();
+                    openedAtRef.current = t;
+                    setVideoOpenedAt(t);
+                  }
+                })
+                .catch(() => {});
+            }
+          } else if (state === YT_STATE.PAUSED) {
+            setPlayerStatus("paused");
+          } else if (state === YT_STATE.ENDED) {
+            setPlayerStatus("ended");
+            const dur = player.getDuration?.() ?? 0;
+            sendHeartbeat(100, Math.round(dur));
+          }
+        },
+      },
+    });
+    playerRef.current = player;
+
+    return () => {
+      try {
+        playerRef.current?.destroy?.();
+      } catch {
+        // ignore destroy errors on unmount
+      }
+      playerRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ytApiLoaded, embeddable, videoId]);
+
+  // Poll playback position every 5s while playing and heartbeat increases.
+  useEffect(() => {
+    if (playerStatus !== "playing") return;
+    const id = setInterval(() => {
+      const p = playerRef.current;
+      if (!p || typeof p.getDuration !== "function") return;
+      const dur = p.getDuration();
+      if (!dur || dur <= 0) return;
+      const cur = p.getCurrentTime();
+      const pct = Math.min(100, Math.round((cur / dur) * 100));
+      const nowMs = Date.now();
+      if (pct - lastSentRef.current >= 2 || nowMs - lastBeatRef.current >= 10000) {
+        sendHeartbeat(pct, Math.round(cur));
+      }
+    }, 5000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playerStatus]);
+
+  // Single-video unlock: server-verified progress >= 80%
+  // Playlist fallback unlock: opened + dwell time elapsed
+  const videoLocked = task?.taskType === "VIDEO" && task?.resource?.youtubeUrl;
+  const playlist = videoLocked
+    ? isPlaylistUrl(task.resource.youtubeUrl)
+    : false;
+
+  // Tick every second for the playlist fallback countdown (embedded single
+  // videos use heartbeat progress instead — no countdown needed).
+  useEffect(() => {
+    if (!playlist || videoOpenedAt === null) return;
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
-  }, [videoOpenedAt]);
+  }, [playlist, videoOpenedAt]);
 
-  // ── Anti-cheat: open the video link via our API, then open YouTube ──
+  // ── Playlist fallback: open the link via our API, then YouTube ──
   const handleWatchVideo = async () => {
     if (!task?.resource?.youtubeUrl) return;
     setOpeningVideo(true);
@@ -93,26 +249,28 @@ export default function TaskDetailPage() {
       });
       const v = await res.json();
       if (res.ok && v?.openedAt) {
-        setVideoOpenedAt(new Date(v.openedAt).getTime());
+        const t = new Date(v.openedAt).getTime();
+        openedAtRef.current = t;
+        setVideoOpenedAt(t);
       }
     } catch {
-      // Even if the record call fails, still open the video; the server-side
-      // check in /api/tasks/complete remains the source of truth.
+      // server-side check remains the source of truth
     } finally {
       setOpeningVideo(false);
       window.open(task.resource.youtubeUrl, "_blank", "noopener,noreferrer");
     }
   };
 
-  // Remaining seconds of required watch time (0 = unlocked)
-  const videoLocked = task?.taskType === "VIDEO" && task?.resource?.youtubeUrl;
-  const requiredMin = videoLocked
+  const requiredMin = playlist
     ? requiredWatchMinutes(task.resource.estimatedMinutes || task.estimatedMinutes || 15)
     : 0;
-  const remainingSec = videoLocked
+  const remainingSec = playlist
     ? Math.max(0, requiredMin * 60 - ((videoOpenedAt ? now - videoOpenedAt : Infinity) / 1000))
     : 0;
-  const videoUnlocked = !videoLocked || (videoOpenedAt !== null && remainingSec <= 0);
+
+  const videoUnlocked = !videoLocked || (playlist
+    ? videoOpenedAt !== null && remainingSec <= 0
+    : verifiedProgress >= VIDEO_COMPLETE_PROGRESS);
 
   const handleComplete = async () => {
     setCompleting(true);
@@ -154,7 +312,6 @@ export default function TaskDetailPage() {
   // Resolve resource data
   const resource = task?.resource ?? null;
   const hasVideo = resource && resource.youtubeUrl;
-  const playlist = hasVideo ? isPlaylist(resource.youtubeUrl) : false;
   const watchLabel = playlist ? "Open Playlist" : "Watch Video";
 
   return (
@@ -233,34 +390,113 @@ export default function TaskDetailPage() {
                         </span>
                       </div>
 
-                      {/* Watch button — records the open via /api/tasks/visit
-                          BEFORE the video opens (anti-cheat verification) */}
-                      <button
-                        onClick={handleWatchVideo}
-                        disabled={openingVideo}
-                        className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition text-sm font-medium disabled:opacity-60 disabled:cursor-wait"
-                      >
-                        {openingVideo ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <ExternalLink className="w-4 h-4" />
-                        )}
-                        {openingVideo ? "Opening..." : watchLabel}
-                      </button>
+                      {/* ── Embedded player (single videos) ── */}
+                      {embeddable ? (
+                        <div className="space-y-3">
+                          <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden">
+                            <div ref={playerBoxRef} className="w-full h-full" />
+                            {playerStatus === "idle" && (
+                              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-slate-400">
+                                <Loader2 className="w-8 h-8 animate-spin text-red-400" />
+                                <span className="text-sm">Loading video player…</span>
+                              </div>
+                            )}
+                          </div>
 
-                      {/* Watch verification status */}
-                      {videoOpenedAt !== null && (
-                        <div className="flex items-center gap-2 text-xs text-emerald-400">
-                          <ShieldCheck className="w-4 h-4" />
-                          {remainingSec > 0 ? (
-                            <span>
-                              Video opened ✓ — completion unlocks in{" "}
-                              <span className="font-semibold tabular-nums">
-                                {formatCountdown(remainingSec)}
+                          {/* Progress bar */}
+                          <div>
+                            <div className="flex items-center justify-between text-xs mb-1.5">
+                              <span className="text-slate-400">
+                                {playerStatus === "playing" && "Playing…"}
+                                {playerStatus === "paused" && "Paused"}
+                                {playerStatus === "ended" && "Finished"}
+                                {(playerStatus === "idle" || playerStatus === "loading" || playerStatus === "ready") &&
+                                  "Press play to start"}
+                                {playerStatus === "error" && "Video unavailable"}
                               </span>
-                            </span>
-                          ) : (
-                            <span>Video opened ✓ — watch time verified</span>
+                              <span
+                                className={`font-semibold tabular-nums ${
+                                  verifiedProgress >= VIDEO_COMPLETE_PROGRESS
+                                    ? "text-emerald-400"
+                                    : "text-amber-400"
+                                }`}
+                              >
+                                {Math.round(verifiedProgress)}% verified
+                              </span>
+                            </div>
+                            <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all ${
+                                  verifiedProgress >= VIDEO_COMPLETE_PROGRESS
+                                    ? "bg-emerald-500"
+                                    : "bg-gradient-to-r from-red-500 to-amber-400"
+                                }`}
+                                style={{ width: `${Math.min(100, verifiedProgress)}%` }}
+                              />
+                            </div>
+                            {verifiedProgress < VIDEO_COMPLETE_PROGRESS && (
+                              <p className="text-xs text-slate-500 mt-1.5">
+                                Completion unlocks at {VIDEO_COMPLETE_PROGRESS}% of the video played
+                                ({Math.max(0, VIDEO_COMPLETE_PROGRESS - Math.round(verifiedProgress))}% to go).
+                              </p>
+                            )}
+                            {verifiedProgress >= VIDEO_COMPLETE_PROGRESS && (
+                              <p className="flex items-center gap-1.5 text-xs text-emerald-400 mt-1.5">
+                                <ShieldCheck className="w-3.5 h-3.5" />
+                                Playback verified — you can complete this task.
+                              </p>
+                            )}
+                            {playerStatus === "error" && (
+                              <p className="flex items-start gap-1.5 text-xs text-red-400 mt-2">
+                                <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                                This video can't be embedded. Open it in YouTube below — playback
+                                verification requires the embedded player, so contact support if it
+                                stays unavailable.
+                              </p>
+                            )}
+                          </div>
+
+                          {/* External link */}
+                          <a
+                            href={resource.youtubeUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition text-sm font-medium"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                            Open in YouTube
+                          </a>
+                        </div>
+                      ) : (
+                        /* ── Playlist / non-embeddable fallback ── */
+                        <div className="space-y-3">
+                          <button
+                            onClick={handleWatchVideo}
+                            disabled={openingVideo}
+                            className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition text-sm font-medium disabled:opacity-60 disabled:cursor-wait"
+                          >
+                            {openingVideo ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <ExternalLink className="w-4 h-4" />
+                            )}
+                            {openingVideo ? "Opening..." : watchLabel}
+                          </button>
+
+                          {videoOpenedAt !== null && (
+                            <div className="flex items-center gap-2 text-xs text-emerald-400">
+                              <ShieldCheck className="w-4 h-4" />
+                              {remainingSec > 0 ? (
+                                <span>
+                                  Video opened ✓ — completion unlocks in{" "}
+                                  <span className="font-semibold tabular-nums">
+                                    {formatCountdown(remainingSec)}
+                                  </span>
+                                </span>
+                              ) : (
+                                <span>Video opened ✓ — watch time verified</span>
+                              )}
+                            </div>
                           )}
                         </div>
                       )}
@@ -305,9 +541,13 @@ export default function TaskDetailPage() {
 
                   {videoLocked && !videoUnlocked && (
                     <p className="text-sm text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3">
-                      {videoOpenedAt === null
-                        ? "Open the video link first — completion is locked until the video has been opened and the required watch time is met."
-                        : `Watch time in progress — completion unlocks in ${formatCountdown(remainingSec)}.`}
+                      {playlist
+                        ? videoOpenedAt === null
+                          ? "Open the playlist link first — completion is locked until the video has been opened and the required watch time is met."
+                          : `Watch time in progress — completion unlocks in ${formatCountdown(remainingSec)}.`
+                        : verifiedProgress <= 0
+                        ? "Play the video in the embedded player — completion unlocks after at least 80% of the video has played."
+                        : `Keep watching — completion unlocks at ${VIDEO_COMPLETE_PROGRESS}% of the video. You're at ${Math.round(verifiedProgress)}%.`}
                     </p>
                   )}
 
@@ -316,7 +556,7 @@ export default function TaskDetailPage() {
                     disabled={completing || (videoLocked && !videoUnlocked)}
                     title={
                       videoLocked && !videoUnlocked
-                        ? "Complete the video watch time before marking this task complete."
+                        ? "Watch at least 80% of the video before marking this task complete."
                         : undefined
                     }
                     className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold hover:shadow-lg hover:shadow-cyan-500/25 transition-all disabled:opacity-50"

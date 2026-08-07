@@ -62,10 +62,30 @@ export const CODE_PASS_THRESHOLD = 75;
  * Minimum minutes a student must spend AFTER opening a video link before a
  * VIDEO task can be marked complete (anti-cheat). 50% of the video's estimated
  * duration, floored at 2 min and capped at 20 min.
+ *
+ * Fallback only — used for playlists and videos that can't be embedded.
+ * Single videos are verified by real playback progress (VIDEO_COMPLETE_PROGRESS).
  */
 export function requiredWatchMinutes(estimatedMinutes: number): number {
   return Math.min(Math.max(Math.ceil(estimatedMinutes * 0.5), 2), 20);
 }
+
+/**
+ * Playback progress (percent) a student must reach in the embedded YouTube
+ * player before a VIDEO task can be marked complete.
+ */
+export const VIDEO_COMPLETE_PROGRESS = 80;
+
+/**
+ * Heartbeats report (secondsWatched). To stop faked progress, the server
+ * rejects any heartbeat whose watched seconds exceed the wall-clock time since
+ * the video was opened, multiplied by this speed factor (allows 1.75x) plus a
+ * small grace period for buffering/pauses between samples.
+ */
+export const VIDEO_HEARTBEAT_MAX_SPEED = 1.75;
+// Small grace for buffering/pause between samples — keeps legit playback
+// plausible while limiting how much instant credit a cheater can claim.
+export const VIDEO_HEARTBEAT_GRACE_SECONDS = 30;
 
 /** Hours since last activity after which a student is considered inactive */
 export const INACTIVE_THRESHOLD_DAYS = 3;

@@ -163,6 +163,9 @@ export async function POST(req: NextRequest) {
       where: {
         studentProfileId: profile.id,
         createdAt: { gte: weekStart },
+        // VIDEO_PROGRESS/VIDEO_OPENED rows carry playback progress (0-100) in
+        // minutesSpent, not real minutes — exclude them from weekly totals.
+        action: { notIn: ["VIDEO_PROGRESS", "VIDEO_OPENED"] },
       },
     });
     const totalMinutesThisWeek = weeklyLogs.reduce((sum, l) => sum + l.minutesSpent, 0);

@@ -37,6 +37,9 @@ export async function GET() {
           take: 5,
         },
         activityLogs: {
+          // Internal video-playback verification rows (open/heartbeat) carry
+          // progress JSON, not real activity — keep them out of the feed.
+          where: { action: { notIn: ["VIDEO_PROGRESS", "VIDEO_OPENED"] } },
           orderBy: { createdAt: "desc" },
           take: 10,
         },
