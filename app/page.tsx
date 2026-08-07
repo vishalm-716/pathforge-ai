@@ -208,9 +208,6 @@ export default function HomePage() {
             <Brain className="w-4 h-4 text-cyan-400" />
             PathForge AI — Agentic AI for Human Potential
           </div>
-          <p className="text-slate-500 text-sm">
-            Built for the 24-hour hackathon. CSE students, English only.
-          </p>
         </div>
       </footer>
     </div>
