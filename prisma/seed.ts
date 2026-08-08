@@ -8,7 +8,7 @@ async function main() {
   console.log("🌱 Seeding PathForge AI database...\n");
 
   // ─── 1. Admin User ──────────────────────────────────
-  const hashedPassword = await bcrypt.hash("Admin@123", 12);
+  const hashedPassword = await bcrypt.hash("Vishalm_16", 12);
 
   const admin = await prisma.user.upsert({
     where: { email: "admin@pathforge.ai" },
@@ -2821,7 +2821,7 @@ async function main() {
   // ─── Done ──────────────────────────────────────────────
   console.log("\n🎉 Seed complete!");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("  Admin:     admin@pathforge.ai / Admin@123");
+  console.log("  Admin:     admin@pathforge.ai / Vishalm_16");
   console.log("  Demo:      demo.student@pathforge.ai (seeded)");
   console.log("  Tracks:    DSA, Python, JavaScript, React, Java, Node.js, SQL");
   console.log("  Questions: 70 MCQs + 28 Coding = 98 total");

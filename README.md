@@ -168,7 +168,7 @@ The project deploys to Vercel **without any Prisma schema changes**.
 - [ ] `FREEBUFF_API_KEY` set if AI text features are wanted (optional).
 - [ ] `DEMO_MODE` unset/false in production (the `/demo` route is disabled).
 - [ ] Migrations applied to the production database (`prisma migrate deploy`).
-- [ ] Change the seeded admin password (`prisma/seed.ts` uses `Admin@123`)
+- [ ] Change the seeded admin password (`prisma/seed.ts` uses `Vishalm_16`)
       before real users sign up.
 - [ ] Run `npm run typecheck` and `npm run build` locally — both must pass.
 
