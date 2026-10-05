@@ -3,14 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-  "dev": "next dev -p 7000",
-  "build": "next build",
-  "start": "next start -p 7000",
-  "postinstall": "prisma generate",
-  "typecheck": "tsc --noEmit"
-},
+    "dev": "next dev -p 7000",
+    "build": "next build",
+    "start": "next start -p 7000",
+    "postinstall": "prisma generate",
+    "typecheck": "tsc --noEmit"
+  },
   "prisma": {
-    "seed": "npx tsx prisma/seed.ts"
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",
@@ -19,7 +19,7 @@
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.4.2",
     "lucide-react": "^1.27.0",
-    "next": "15.5.3",
+    "next": "15.5.27",
     "next-auth": "^5.0.0-beta.25",
     "pg": "^8.22.0",
     "prisma": "^5.19.0",
@@ -34,8 +34,9 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.12",
+    "eslint-config-next": "^16.2.12",
     "tailwindcss": "^4",
+    "tsx": "^4.19.2",
     "typescript": "^5"
   }
 }

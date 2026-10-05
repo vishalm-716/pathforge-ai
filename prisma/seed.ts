@@ -8,32 +8,68 @@ async function main() {
   console.log("🌱 Seeding PathForge AI database...\n");
 
   // ─── 1. Admin User ──────────────────────────────────
-  const hashedPassword = await bcrypt.hash("Vishalm_16", 12);
+  // No default/admin credential is ever created by this script. An admin is
+  // created only when BOTH env vars are supplied out-of-band, and the password
+  // is read from the environment (never from source, never printed).
+  const adminEmail = process.env.SEED_ADMIN_EMAIL?.trim().toLowerCase();
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
 
-  const admin = await prisma.user.upsert({
-    where: { email: "admin@pathforge.ai" },
-    update: {},
-    create: {
-      email: "admin@pathforge.ai",
-      name: "PathForge Admin",
-      password: hashedPassword,
-      role: "ADMIN",
-    },
-  });
-  console.log("✅ Admin user created:", admin.email);
+  if (!adminEmail || !adminPassword) {
+    console.log(
+      "ℹ️  No SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD set — skipping admin creation.\n" +
+        "   Create a production admin separately (see README)."
+    );
+  } else {
+    if (adminPassword.length < 12) {
+      throw new Error(
+        "SEED_ADMIN_PASSWORD must be at least 12 characters."
+      );
+    }
+    const hashedPassword = await bcrypt.hash(adminPassword, 12);
 
-  // ─── 2. Demo Student ────────────────────────────────
-  const demoStudent = await prisma.user.upsert({
-    where: { email: "demo.student@pathforge.ai" },
-    update: {},
-    create: {
-      email: "demo.student@pathforge.ai",
-      name: "Arjun Kumar",
-      role: "STUDENT",
-      image: null,
-    },
-  });
-  console.log("✅ Demo student created:", demoStudent.email);
+    await prisma.user.upsert({
+      where: { email: adminEmail },
+      // Never overwrite an existing password — only backfill an admin that
+      // exists without one (e.g. promoted from Google sign-in).
+      update: {},
+      create: {
+        email: adminEmail,
+        name: "PathForge Admin",
+        password: hashedPassword,
+        role: "ADMIN",
+      },
+    });
+    console.log("✅ Admin user ensured:", adminEmail);
+  }
+
+  // ─── 2. Demo Student (opt-in) ────────────────────────
+  // The demo student is a public showcase record. It is NOT created during a
+  // production seed unless SEED_DEMO_DATA=true is set explicitly. It has no
+  // password, so it can never be logged into.
+  const demoStudentEmail =
+    process.env.SEED_DEMO_STUDENT_EMAIL?.trim().toLowerCase() ||
+    "demo.student@pathforge.ai";
+  const seedDemoData = process.env.SEED_DEMO_DATA === "true";
+
+  const demoStudent = seedDemoData
+    ? await prisma.user.upsert({
+        where: { email: demoStudentEmail },
+        update: {},
+        create: {
+          email: demoStudentEmail,
+          name: "Arjun Kumar",
+          role: "STUDENT",
+          image: null,
+        },
+      })
+    : null;
+  if (demoStudent) {
+    console.log("✅ Demo student ensured:", demoStudent.email);
+  } else {
+    console.log(
+      "ℹ️  SEED_DEMO_DATA is not 'true' — skipping demo student and all demo activity."
+    );
+  }
 
   // ─── 3. Tracks ──────────────────────────────────────
   const dsaTrack = await prisma.track.upsert({
@@ -2493,6 +2529,21 @@ async function main() {
 
   console.log("✅ SQL questions seeded: 10 MCQs + 4 coding");
 
+  // ─── Guard: everything below is demo-only data ─────────────
+  // Content (tracks, resources, questions) is seeded above and is what a
+  // production database actually needs. The demo student's profile, plan,
+  // milestones, tasks, attempts, insights, notifications and activity logs are
+  // only created when SEED_DEMO_DATA=true.
+  if (!demoStudent) {
+    console.log("\n🎉 Seed complete (production content only).");
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.log("  Tracks:    DSA, Python, JavaScript, React, Java, Node.js, SQL");
+    console.log("  Admin:     NOT created — set SEED_ADMIN_EMAIL/PASSWORD and re-run");
+    console.log("  Demo data: skipped (SEED_DEMO_DATA != true)");
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+    return;
+  }
+
   // ═══════════════════════════════════════════════════════
   // ─── 7. Demo Student Profile & Learning Plan ──────────
   // ═══════════════════════════════════════════════════════
@@ -2821,8 +2872,8 @@ async function main() {
   // ─── Done ──────────────────────────────────────────────
   console.log("\n🎉 Seed complete!");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("  Admin:     admin@pathforge.ai / Vishalm_16");
-  console.log("  Demo:      demo.student@pathforge.ai (seeded)");
+  console.log("  Demo:      " + demoStudent.email);
+  console.log("  Admin:     NOT created by seed — set SEED_ADMIN_EMAIL/PASSWORD");
   console.log("  Tracks:    DSA, Python, JavaScript, React, Java, Node.js, SQL");
   console.log("  Questions: 70 MCQs + 28 Coding = 98 total");
   console.log("  Agent:     Pending MASTERY_GAP insight (40% quiz)");
