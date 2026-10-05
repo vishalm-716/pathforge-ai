@@ -170,8 +170,15 @@ app — there is no separate backend service.
 - Apply migrations to the production database explicitly, once, from a machine
   that holds the production `DATABASE_URL`:
   `npx prisma migrate deploy`
-- `vercel.json` pins the Node.js runtime to `22.x`. Next.js default output is
-  used (no `output: "export"`), which is required for the API routes.
+- The Framework Preset must be **Next.js** (Vercel dashboard → Settings →
+  General, or `vercel project update pathforge-ai --framework nextjs`). With the
+  preset left as “Other”, Vercel treats the build as a static site and the
+  deploy fails with `Unable to find lambda for route: /…`.
+- Next.js default output is used — **no** `output: "export"`, which would break
+  every `app/api/*` route.
+- Do **not** add an `engines` block to a `vercel.json`. Vercel rejects the file
+  outright with `Invalid vercel.json - should NOT have additional property
+  'engines'`. Set the Node.js version in the project settings instead.
 
 ### Environment variables (set in the Vercel dashboard, never in Git)
 
