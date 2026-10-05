@@ -10,7 +10,23 @@ const codeSubmitSchema = z.object({
   questionId: z.string().min(1),
   code: z.string().min(1),
   language: z.enum(CODE_LANGUAGES),
+  // The learning task this challenge belongs to — used to auto-complete the
+  // task in the student's plan when the submission passes.
+  taskId: z.string().min(1).optional(),
 });
+
+interface CodeEvaluation {
+  passed: boolean;
+  score: number;
+  feedback: string;
+  details: {
+    matchedKeywords: string[];
+    missingKeywords: string[];
+    keywordPoints: number;
+    hasFunctionOrLoop: boolean;
+    hasReturn: boolean;
+  };
+}
 
 /**
  * MVP sandboxed evaluator / demo validation — not production code execution.
@@ -19,26 +35,40 @@ const codeSubmitSchema = z.object({
  * Scoring is keyword-coverage based (worth 80 pts) so it is fair across every
  * language, including SQL where function/loop/return constructs don't exist.
  * Structure markers add a small bonus (up to +20) — never a hard requirement.
+ *
+ * The feedback is built to tell the student exactly WHAT is wrong when they
+ * fail: which expected concepts are missing, plus language-appropriate hints
+ * about structure and returning a result (SQL skips those hints because SQL
+ * queries legitimately have no function/loop/return constructs).
  */
 function evaluateCode(
   code: string,
   language: string,
   expectedKeywords: string | null
-): { passed: boolean; score: number; feedback: string } {
+): CodeEvaluation {
   if (!expectedKeywords) {
     return {
       passed: true,
       score: CODE_PASS_THRESHOLD,
       feedback: "Code submitted successfully. Manual review recommended.",
+      details: {
+        matchedKeywords: [],
+        missingKeywords: [],
+        keywordPoints: 0,
+        hasFunctionOrLoop: false,
+        hasReturn: false,
+      },
     };
   }
 
   const keywords = expectedKeywords
     .split(",")
-    .map((k) => k.trim().toLowerCase());
+    .map((k) => k.trim().toLowerCase())
+    .filter(Boolean);
   const codeLower = code.toLowerCase();
   const matchedKeywords = keywords.filter((k) => codeLower.includes(k));
-  const matchRatio = matchedKeywords.length / keywords.length;
+  const matchRatio =
+    keywords.length > 0 ? matchedKeywords.length / keywords.length : 0;
 
   // Check for basic syntax patterns (bonus only — SQL has none of these)
   const hasFunctionOrLoop =
@@ -56,25 +86,45 @@ function evaluateCode(
     codeLower.includes("console.log") ||
     codeLower.includes("system.out");
 
-  let score = Math.round(matchRatio * 80);
+  const keywordPoints = Math.round(matchRatio * 80);
+  let score = keywordPoints;
   if (hasFunctionOrLoop) score += 10;
   if (hasReturn) score += 10;
   score = Math.min(score, 100);
 
   const passed = score >= CODE_PASS_THRESHOLD;
-
   const missingKeywords = keywords.filter((k) => !matchedKeywords.includes(k));
+
+  const details = {
+    matchedKeywords,
+    missingKeywords,
+    keywordPoints,
+    hasFunctionOrLoop,
+    hasReturn,
+  };
 
   let feedback: string;
   if (passed) {
-    feedback = `Excellent! Your ${language} solution covers the key concepts (${matchedKeywords.join(", ")}). Score: ${score}%`;
-  } else if (score >= CODE_PASS_THRESHOLD - 25) {
-    feedback = `Good attempt! You're close — include all expected keywords and logic to pass (${CODE_PASS_THRESHOLD}%+). Consider using: ${missingKeywords.join(", ")}. Score: ${score}%`;
+    feedback = `Passed with a score of ${score}% (threshold ${CODE_PASS_THRESHOLD}%). Your solution covers the required concepts${
+      matchedKeywords.length > 0 ? ` (${matchedKeywords.join(", ")})` : ""
+    }.`;
   } else {
-    feedback = `Your solution needs improvement. Key concepts to include: ${missingKeywords.join(", ")}. Score: ${score}%`;
+    const missing =
+      missingKeywords.length > 0
+        ? `Missing expected concepts: ${missingKeywords.join(", ")}.`
+        : "None of the expected concepts for this challenge were found in your code.";
+    // SQL has no function/loop/return constructs — only give structure hints
+    // in the languages where they apply.
+    const structureHints =
+      language === "sql"
+        ? ""
+        : `${!hasFunctionOrLoop ? " Your solution also needs a loop or function (for/while/def/function)." : ""}${
+            !hasReturn ? " It must return or print the result (return/print/console.log)." : ""
+          }`;
+    feedback = `Not passed — score ${score}% (need ${CODE_PASS_THRESHOLD}% or more). ${missing}${structureHints} Review the sample output and hints, then try again.`;
   }
 
-  return { passed, score, feedback };
+  return { passed, score, feedback, details };
 }
 
 export async function POST(req: NextRequest) {
@@ -85,11 +135,18 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { questionId, code, language } = codeSubmitSchema.parse(body);
+    const { questionId, code, language, taskId } = codeSubmitSchema.parse(body);
 
     const profile = await prisma.studentProfile.findUnique({
       where: { userId: session.user.id },
-      include: { learningPlan: { include: { track: true } } },
+      include: {
+        learningPlan: {
+          include: {
+            track: true,
+            milestones: { include: { tasks: true } },
+          },
+        },
+      },
     });
 
     if (!profile) {
@@ -134,7 +191,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { passed, score, feedback } = evaluateCode(
+    const { passed, score, feedback, details } = evaluateCode(
       code,
       language,
       question.expectedKeywords
@@ -152,6 +209,77 @@ export async function POST(req: NextRequest) {
         passed,
       },
     });
+
+    // ── On pass: mark the coding task complete in the student's plan ──
+    // Passing the challenge completes the CODING task it belongs to (this is
+    // the "it shows Passed! but the task never becomes Completed" fix). The
+    // task must genuinely belong to this student's plan, be a CODING task,
+    // and not already be completed — repeated passing submissions are
+    // idempotent and never re-credit progress or minutes.
+    let taskCompleted = false;
+    const plan = profile.learningPlan;
+    if (passed && taskId && plan) {
+      const learningTask = await prisma.learningTask.findUnique({
+        where: { id: taskId },
+        select: { id: true, milestoneId: true, status: true, taskType: true },
+      });
+
+      const belongsToPlan = plan.milestones.some(
+        (m) => m.id === learningTask?.milestoneId
+      );
+
+      if (
+        learningTask &&
+        belongsToPlan &&
+        learningTask.taskType === "CODING" &&
+        learningTask.status !== "COMPLETED"
+      ) {
+        await prisma.learningTask.update({
+          where: { id: taskId },
+          data: { status: "COMPLETED", actualMinutes: 20 },
+        });
+
+        // Recompute plan progress (snapshot is stale — count this task).
+        const allTasks = plan.milestones.flatMap((m) => m.tasks);
+        const completedCount = allTasks.filter(
+          (t) => t.status === "COMPLETED" || t.id === taskId
+        ).length;
+        const totalTasks = allTasks.length;
+        const newProgress =
+          totalTasks > 0 ? Math.round((completedCount / totalTasks) * 100) : 0;
+
+        await prisma.learningPlan.update({
+          where: { id: plan.id },
+          data: {
+            overallProgress: newProgress,
+            completedMinutes: { increment: 20 },
+          },
+        });
+
+        // Mark the milestone complete when every task in it is done.
+        for (const milestone of plan.milestones) {
+          const allDone = milestone.tasks.every(
+            (t) => t.status === "COMPLETED" || t.id === taskId
+          );
+          if (allDone && !milestone.isCompleted) {
+            await prisma.milestone.update({
+              where: { id: milestone.id },
+              data: { isCompleted: true },
+            });
+          }
+        }
+
+        await prisma.activityLog.create({
+          data: {
+            studentProfileId: profile.id,
+            action: "TASK_COMPLETED",
+            details: `Completed task: ${taskId}`,
+            minutesSpent: 20,
+          },
+        });
+        taskCompleted = true;
+      }
+    }
 
     // Log activity
     await prisma.activityLog.create({
@@ -197,6 +325,8 @@ export async function POST(req: NextRequest) {
       passed,
       score,
       feedback,
+      details,
+      taskCompleted,
       submissionId: submission.id,
     });
   } catch (error) {

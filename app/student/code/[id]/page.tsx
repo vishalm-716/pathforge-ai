@@ -101,7 +101,12 @@ export default function CodePage() {
       const res = await fetch("/api/code/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ questionId: question.id, code, language }),
+        body: JSON.stringify({
+          questionId: question.id,
+          code,
+          language,
+          taskId: params.id,
+        }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -281,6 +286,35 @@ export default function CodePage() {
                       </span>
                     </div>
                     <p className="text-sm text-slate-300">{result.feedback}</p>
+
+                    {/* Show exactly which expected concepts are missing so the
+                        student knows what to fix before retrying. */}
+                    {!result.passed &&
+                      Array.isArray(result.details?.missingKeywords) &&
+                      result.details.missingKeywords.length > 0 && (
+                        <div className="mt-3 text-sm">
+                          <p className="text-slate-400 mb-1.5 font-medium">
+                            Missing concepts to include:
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {result.details.missingKeywords.map((k: string) => (
+                              <span
+                                key={k}
+                                className="px-2 py-0.5 rounded-md bg-red-500/10 text-red-300 border border-red-500/20 text-xs font-mono"
+                              >
+                                {k}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                    {result.passed && result.taskCompleted && (
+                      <p className="flex items-center gap-1.5 text-sm text-emerald-400 mt-3">
+                        <CheckCircle2 className="w-4 h-4 shrink-0" />
+                        This task is now marked complete in your plan.
+                      </p>
+                    )}
                   </div>
                 )}
               </div>

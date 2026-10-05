@@ -39,6 +39,10 @@ const YT_STATE = {
   CUED: 5,
 } as const;
 
+// A forward jump larger than this (in seconds) that isn't explained by normal
+// playback is treated as a seek on the scrubber and snapped back.
+const SEEK_TOLERANCE_SECONDS = 3;
+
 type PlayerStatus =
   | "idle"
   | "loading"
@@ -65,9 +69,12 @@ export default function TaskDetailPage() {
   const openedAtRef = useRef<number | null>(null);
   const lastSentRef = useRef(0);
   const lastBeatRef = useRef(0);
+  // Anti-skip guard: last known playback position + wall-clock sample time
+  const lastSampleRef = useRef<{ time: number; at: number } | null>(null);
   const [ytApiLoaded, setYtApiLoaded] = useState(false);
   const [playerStatus, setPlayerStatus] = useState<PlayerStatus>("idle");
   const [verifiedProgress, setVerifiedProgress] = useState(0); // server-confirmed
+  const [seekWarning, setSeekWarning] = useState(false);
 
   // Playlist fallback state
   const [videoOpenedAt, setVideoOpenedAt] = useState<number | null>(null);
@@ -153,7 +160,9 @@ export default function TaskDetailPage() {
 
     const player = new w.YT.Player(playerBoxRef.current, {
       videoId,
-      playerVars: { rel: 0, modestbranding: 1, playsinline: 1 },
+      // disablekb blocks keyboard seeking (arrow keys / j / k / home / end).
+      // Scrubber drags are caught by the seek-guard poller below.
+      playerVars: { rel: 0, modestbranding: 1, playsinline: 1, disablekb: 1 },
       events: {
         onReady: () => setPlayerStatus("ready"),
         onError: () => setPlayerStatus("error"),
@@ -161,6 +170,7 @@ export default function TaskDetailPage() {
           const state: number = e?.data;
           if (state === YT_STATE.PLAYING) {
             setPlayerStatus("playing");
+            setSeekWarning(false);
             // Record the open on first playback start (server rejects
             // heartbeats before the video has been opened).
             if (openedAtRef.current === null) {
@@ -221,6 +231,68 @@ export default function TaskDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playerStatus]);
 
+  // Reset the seek-guard baseline whenever the video changes (the player is
+  // recreated, so the old video's position must not leak into the new one).
+  useEffect(() => {
+    lastSampleRef.current = null;
+    setSeekWarning(false);
+  }, [videoId]);
+
+  // ── Anti-skip guard: the red scrubber can't be used to skip ahead ──
+  // Samples the player every second. If the position jumps more than
+  // SEEK_TOLERANCE_SECONDS ahead of where playback should be (accounting for
+  // the current playback rate), the student dragged the progress bar forward
+  // — snap back to the expected position and pause, so skipped content is
+  // never counted as watched and heartbeats stay honest.
+  useEffect(() => {
+    if (!embeddable) return;
+    if (playerStatus !== "playing" && playerStatus !== "paused") return;
+    const id = setInterval(() => {
+      const p = playerRef.current;
+      if (!p || typeof p.getCurrentTime !== "function") return;
+      const state =
+        typeof p.getPlayerState === "function"
+          ? p.getPlayerState()
+          : YT_STATE.PAUSED;
+      const dur = typeof p.getDuration === "function" ? p.getDuration() : 0;
+      const cur = p.getCurrentTime();
+      const nowMs = Date.now();
+      const last = lastSampleRef.current;
+
+      if (!last) {
+        lastSampleRef.current = { time: cur, at: nowMs };
+        return;
+      }
+
+      let expected = last.time;
+      if (state === YT_STATE.PLAYING) {
+        const rate =
+          typeof p.getPlaybackRate === "function" ? p.getPlaybackRate() || 1 : 1;
+        expected = last.time + ((nowMs - last.at) / 1000) * rate;
+        if (dur > 0) expected = Math.min(expected, dur);
+      }
+
+      // A forward jump not explained by playback rate = a scrubber drag.
+      if (cur > expected + SEEK_TOLERANCE_SECONDS) {
+        const snapBack = Math.max(0, Math.min(expected, dur));
+        try {
+          p.seekTo(snapBack, true);
+          p.pauseVideo();
+        } catch {
+          // ignore player errors during the snap-back
+        }
+        lastSampleRef.current = { time: snapBack, at: nowMs };
+        setSeekWarning(true);
+        return;
+      }
+
+      // Backward seeks can't inflate progress — just re-baseline.
+      lastSampleRef.current = { time: cur, at: nowMs };
+    }, 1000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [embeddable, playerStatus]);
+
   // Single-video unlock: server-verified progress >= 80%
   // Playlist fallback unlock: opened + dwell time elapsed
   const videoLocked = task?.taskType === "VIDEO" && task?.resource?.youtubeUrl;
@@ -276,10 +348,16 @@ export default function TaskDetailPage() {
     setCompleting(true);
     setCompleteError(null);
     try {
+      // Video tasks credit the video's estimated duration (they've watched
+      // >=80% of it server-verified) — no manual minutes box.
+      const actualMinutes =
+        task?.taskType === "VIDEO"
+          ? task?.resource?.estimatedMinutes || task?.estimatedMinutes || 15
+          : minutes;
       const res = await fetch("/api/tasks/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ taskId: params.id, actualMinutes: minutes }),
+        body: JSON.stringify({ taskId: params.id, actualMinutes }),
       });
       if (res.ok) {
         setCompleted(true);
@@ -449,23 +527,19 @@ export default function TaskDetailPage() {
                             {playerStatus === "error" && (
                               <p className="flex items-start gap-1.5 text-xs text-red-400 mt-2">
                                 <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                                This video can't be embedded. Open it in YouTube below — playback
-                                verification requires the embedded player, so contact support if it
-                                stays unavailable.
+                                This video can't be embedded, so playback can't be verified here.
+                                Contact support if it stays unavailable.
+                              </p>
+                            )}
+
+                            {seekWarning && (
+                              <p className="flex items-start gap-1.5 text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2 mt-2">
+                                <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                                Skipping ahead is disabled — playback is verified automatically.
+                                Press play to continue from where you were.
                               </p>
                             )}
                           </div>
-
-                          {/* External link */}
-                          <a
-                            href={resource.youtubeUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition text-sm font-medium"
-                          >
-                            <ExternalLink className="w-4 h-4" />
-                            Open in YouTube
-                          </a>
                         </div>
                       ) : (
                         /* ── Playlist / non-embeddable fallback ── */
@@ -523,21 +597,26 @@ export default function TaskDetailPage() {
                 </div>
               ) : (
                 <div className="space-y-4 pt-4 border-t border-slate-800">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Actual time spent (minutes)
-                    </label>
-                    <input
-                      type="number"
-                      value={minutes}
-                      onChange={(e) =>
-                        setMinutes(Math.max(1, parseInt(e.target.value) || 1))
-                      }
-                      min={1}
-                      max={300}
-                      className="w-32 px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-cyan-500"
-                    />
-                  </div>
+                  {/* Video tasks: minutes come from the verified playback (the
+                      video's estimated duration), so the manual input is not
+                      shown — it's neither needed nor trustworthy here. */}
+                  {task.taskType !== "VIDEO" && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Actual time spent (minutes)
+                      </label>
+                      <input
+                        type="number"
+                        value={minutes}
+                        onChange={(e) =>
+                          setMinutes(Math.max(1, parseInt(e.target.value) || 1))
+                        }
+                        min={1}
+                        max={300}
+                        className="w-32 px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-cyan-500"
+                      />
+                    </div>
+                  )}
 
                   {videoLocked && !videoUnlocked && (
                     <p className="text-sm text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3">
