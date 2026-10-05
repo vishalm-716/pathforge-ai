@@ -48,17 +48,17 @@ function ConfirmDeleteModal({
       onClick={handleBackdrop}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
     >
-      <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
+      <div className="w-full max-w-md rounded-2xl border border-line bg-surface p-6 shadow-2xl">
         <div className="flex items-center gap-3 mb-4">
           <span className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/10">
             <AlertTriangle className="w-5 h-5 text-red-400" />
           </span>
-          <h2 className="text-lg font-bold text-white">Delete Student</h2>
+          <h2 className="text-lg font-bold text-fg">Delete Student</h2>
         </div>
 
-        <p className="text-slate-300 mb-6">
+        <p className="text-fg-muted mb-6">
           Are you sure you want to delete{" "}
-          <span className="font-semibold text-white">
+          <span className="font-semibold text-fg">
             {student.name || student.id}
           </span>
           ? This will permanently remove their account, profile, and all
@@ -69,7 +69,7 @@ function ConfirmDeleteModal({
           <button
             onClick={onCancel}
             disabled={loading}
-            className="px-5 py-2.5 rounded-xl border border-slate-700 text-slate-300 hover:bg-slate-800 transition text-sm font-medium disabled:opacity-50"
+            className="px-5 py-2.5 rounded-xl border border-line text-fg-muted hover:bg-elevated transition text-sm font-medium disabled:opacity-50"
           >
             Cancel
           </button>
@@ -144,58 +144,58 @@ export default function AdminStudentsPage() {
 
   if (loading)
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
+      <div className="min-h-screen bg-canvas flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-accent animate-spin" />
       </div>
     );
 
   return (
-    <div className="min-h-screen bg-slate-950">
+    <div className="min-h-screen bg-canvas">
       <AdminSidebar />
       <main className="ml-64 p-8">
-        <h1 className="text-2xl font-bold text-white mb-8">Student Analytics</h1>
+        <h1 className="text-2xl font-bold text-fg mb-8">Student Analytics</h1>
 
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/50 overflow-hidden">
+        <div className="rounded-2xl border border-line bg-surface overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-800 bg-slate-900">
-                <th className="text-left py-4 px-6 text-slate-400 font-medium">Name</th>
-                <th className="text-left py-4 px-6 text-slate-400 font-medium">Email</th>
-                <th className="text-left py-4 px-6 text-slate-400 font-medium">Domain</th>
-                <th className="text-left py-4 px-6 text-slate-400 font-medium">Progress</th>
-                <th className="text-left py-4 px-6 text-slate-400 font-medium">Streak</th>
-                <th className="text-left py-4 px-6 text-slate-400 font-medium">Quiz Score</th>
-                <th className="text-left py-4 px-6 text-slate-400 font-medium">Risk</th>
-                <th className="text-left py-4 px-6 text-slate-400 font-medium">Pending</th>
-                <th className="text-left py-4 px-6 text-slate-400 font-medium">Actions</th>
+              <tr className="border-b border-line bg-surface">
+                <th className="text-left py-4 px-6 text-fg-muted font-medium">Name</th>
+                <th className="text-left py-4 px-6 text-fg-muted font-medium">Email</th>
+                <th className="text-left py-4 px-6 text-fg-muted font-medium">Domain</th>
+                <th className="text-left py-4 px-6 text-fg-muted font-medium">Progress</th>
+                <th className="text-left py-4 px-6 text-fg-muted font-medium">Streak</th>
+                <th className="text-left py-4 px-6 text-fg-muted font-medium">Quiz Score</th>
+                <th className="text-left py-4 px-6 text-fg-muted font-medium">Risk</th>
+                <th className="text-left py-4 px-6 text-fg-muted font-medium">Pending</th>
+                <th className="text-left py-4 px-6 text-fg-muted font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
               {students.map((s) => (
                 <tr
                   key={s.id}
-                  className="border-b border-slate-800/50 hover:bg-slate-800/30"
+                  className="border-b border-line hover:bg-elevated"
                 >
-                  <td className="py-4 px-6 text-white font-medium">{s.name || "—"}</td>
-                  <td className="py-4 px-6 text-slate-300">{s.email}</td>
+                  <td className="py-4 px-6 text-fg font-medium">{s.name || "—"}</td>
+                  <td className="py-4 px-6 text-fg-muted">{s.email}</td>
                   <td className="py-4 px-6">
-                    <span className="px-2 py-1 rounded-md bg-cyan-500/10 text-cyan-400 text-xs">
+                    <span className="px-2 py-1 rounded-md bg-accent-subtle text-accent text-xs">
                       {s.domain || "—"}
                     </span>
                   </td>
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-2">
-                      <div className="w-20 bg-slate-800 rounded-full h-2">
+                      <div className="w-20 bg-elevated rounded-full h-2">
                         <div
-                          className="bg-gradient-to-r from-cyan-500 to-blue-600 h-2 rounded-full"
+                          className="bg-accent h-2 rounded-full"
                           style={{ width: `${s.progress}%` }}
                         />
                       </div>
-                      <span className="text-white text-xs">{s.progress}%</span>
+                      <span className="text-fg text-xs">{s.progress}%</span>
                     </div>
                   </td>
-                  <td className="py-4 px-6 text-white">{s.streak} 🔥</td>
-                  <td className="py-4 px-6 text-white">
+                  <td className="py-4 px-6 text-fg">{s.streak} 🔥</td>
+                  <td className="py-4 px-6 text-fg">
                     {s.latestQuizScore !== null ? `${s.latestQuizScore}%` : "—"}
                   </td>
                   <td className="py-4 px-6">
@@ -204,10 +204,10 @@ export default function AdminStudentsPage() {
                         {s.currentRisk.replace(/_/g, " ")}
                       </span>
                     ) : (
-                      <span className="text-slate-500 text-xs">None</span>
+                      <span className="text-fg-muted text-xs">None</span>
                     )}
                   </td>
-                  <td className="py-4 px-6 text-white">{s.pendingRecommendations}</td>
+                  <td className="py-4 px-6 text-fg">{s.pendingRecommendations}</td>
                   <td className="py-4 px-6">
                     <button
                       onClick={() =>
@@ -224,7 +224,7 @@ export default function AdminStudentsPage() {
             </tbody>
           </table>
           {students.length === 0 && (
-            <p className="text-center text-slate-500 py-12">No students yet.</p>
+            <p className="text-center text-fg-muted py-12">No students yet.</p>
           )}
         </div>
       </main>

@@ -381,8 +381,8 @@ export default function TaskDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
+      <div className="min-h-screen bg-canvas flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-accent animate-spin" />
       </div>
     );
   }
@@ -393,35 +393,35 @@ export default function TaskDetailPage() {
   const watchLabel = playlist ? "Open Playlist" : "Watch Video";
 
   return (
-    <div className="min-h-screen bg-slate-950">
+    <div className="min-h-screen bg-canvas">
       <StudentSidebar />
       <main className="ml-64 p-8">
         <div className="max-w-2xl">
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-2 text-slate-400 hover:text-white transition mb-6"
+            className="flex items-center gap-2 text-fg-muted hover:text-fg transition mb-6"
           >
             <ArrowLeft className="w-4 h-4" />
             Back
           </button>
 
           {task ? (
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-8 space-y-6">
+            <div className="rounded-2xl border border-line bg-surface p-8 space-y-6">
               {/* Task type badge + title */}
               <div>
-                <span className="px-3 py-1 rounded-lg text-xs font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                <span className="px-3 py-1 rounded-lg text-xs font-medium bg-accent-subtle text-accent border border-accent-line">
                   {task.taskType}
                 </span>
-                <h1 className="text-2xl font-bold text-white mt-3">{task.title}</h1>
-                <p className="text-slate-400 mt-2">{task.topic}</p>
+                <h1 className="text-2xl font-bold text-fg mt-3">{task.title}</h1>
+                <p className="text-fg-muted mt-2">{task.topic}</p>
               </div>
 
               {task.description && (
-                <p className="text-slate-300 leading-relaxed">{task.description}</p>
+                <p className="text-fg-muted leading-relaxed">{task.description}</p>
               )}
 
               {/* Basic task meta */}
-              <div className="flex items-center gap-6 text-sm text-slate-400">
+              <div className="flex items-center gap-6 text-sm text-fg-muted">
                 <span className="flex items-center gap-2">
                   <Clock className="w-4 h-4" />
                   {task.estimatedMinutes} minutes
@@ -433,15 +433,15 @@ export default function TaskDetailPage() {
               {task.taskType === "VIDEO" && (
                 <>
                   {hasVideo ? (
-                    <div className="rounded-xl border border-slate-700 bg-slate-800/40 p-5 space-y-4">
+                    <div className="rounded-xl border border-line bg-elevated p-5 space-y-4">
                       {/* Resource title */}
-                      <h2 className="text-lg font-semibold text-white">{resource.title}</h2>
+                      <h2 className="text-lg font-semibold text-fg">{resource.title}</h2>
 
                       {/* Topic + duration + difficulty + Video/Playlist badge */}
                       <div className="flex flex-wrap items-center gap-3 text-sm">
-                        <span className="text-slate-400">{resource.topic}</span>
+                        <span className="text-fg-muted">{resource.topic}</span>
 
-                        <span className="flex items-center gap-1 text-slate-400">
+                        <span className="flex items-center gap-1 text-fg-muted">
                           <Clock className="w-3.5 h-3.5" />
                           {resource.estimatedMinutes} min
                         </span>
@@ -450,7 +450,7 @@ export default function TaskDetailPage() {
                           <span
                             className={`px-2.5 py-0.5 rounded-md text-xs font-semibold ${
                               difficultyStyle[resource.difficulty] ??
-                              "bg-slate-700 text-slate-300 border border-slate-600"
+                              "bg-elevated text-fg-muted border border-line"
                             }`}
                           >
                             {resource.difficulty}
@@ -458,7 +458,7 @@ export default function TaskDetailPage() {
                         )}
 
                         {/* Video / Playlist badge with icon */}
-                        <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                        <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-blue-500/10 text-info border border-blue-500/20">
                           {playlist ? (
                             <Video className="w-3.5 h-3.5" />
                           ) : (
@@ -474,7 +474,7 @@ export default function TaskDetailPage() {
                           <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden">
                             <div ref={playerBoxRef} className="w-full h-full" />
                             {playerStatus === "idle" && (
-                              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-slate-400">
+                              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-fg-muted">
                                 <Loader2 className="w-8 h-8 animate-spin text-red-400" />
                                 <span className="text-sm">Loading video player…</span>
                               </div>
@@ -484,7 +484,7 @@ export default function TaskDetailPage() {
                           {/* Progress bar */}
                           <div>
                             <div className="flex items-center justify-between text-xs mb-1.5">
-                              <span className="text-slate-400">
+                              <span className="text-fg-muted">
                                 {playerStatus === "playing" && "Playing…"}
                                 {playerStatus === "paused" && "Paused"}
                                 {playerStatus === "ended" && "Finished"}
@@ -502,7 +502,7 @@ export default function TaskDetailPage() {
                                 {Math.round(verifiedProgress)}% verified
                               </span>
                             </div>
-                            <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
+                            <div className="w-full h-2 bg-elevated rounded-full overflow-hidden">
                               <div
                                 className={`h-full rounded-full transition-all ${
                                   verifiedProgress >= VIDEO_COMPLETE_PROGRESS
@@ -513,7 +513,7 @@ export default function TaskDetailPage() {
                               />
                             </div>
                             {verifiedProgress < VIDEO_COMPLETE_PROGRESS && (
-                              <p className="text-xs text-slate-500 mt-1.5">
+                              <p className="text-xs text-fg-muted mt-1.5">
                                 Completion unlocks at {VIDEO_COMPLETE_PROGRESS}% of the video played
                                 ({Math.max(0, VIDEO_COMPLETE_PROGRESS - Math.round(verifiedProgress))}% to go).
                               </p>
@@ -577,8 +577,8 @@ export default function TaskDetailPage() {
                     </div>
                   ) : (
                     /* Fallback — resourceId is null or URL is empty */
-                    <div className="rounded-xl border border-slate-700 bg-slate-800/40 p-5">
-                      <p className="text-slate-400 text-sm">
+                    <div className="rounded-xl border border-line bg-elevated p-5">
+                      <p className="text-fg-muted text-sm">
                         No video resource available for this task yet.
                       </p>
                     </div>
@@ -596,13 +596,13 @@ export default function TaskDetailPage() {
                   </div>
                 </div>
               ) : (
-                <div className="space-y-4 pt-4 border-t border-slate-800">
+                <div className="space-y-4 pt-4 border-t border-line">
                   {/* Video tasks: minutes come from the verified playback (the
                       video's estimated duration), so the manual input is not
                       shown — it's neither needed nor trustworthy here. */}
                   {task.taskType !== "VIDEO" && (
                     <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                      <label className="block text-sm font-medium text-fg-muted mb-2">
                         Actual time spent (minutes)
                       </label>
                       <input
@@ -613,7 +613,7 @@ export default function TaskDetailPage() {
                         }
                         min={1}
                         max={300}
-                        className="w-32 px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-cyan-500"
+                        className="w-32 px-4 py-2.5 rounded-xl bg-elevated border border-line text-fg focus:outline-none focus:border-accent-line"
                       />
                     </div>
                   )}
@@ -638,7 +638,7 @@ export default function TaskDetailPage() {
                         ? "Watch at least 80% of the video before marking this task complete."
                         : undefined
                     }
-                    className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold hover:shadow-lg hover:shadow-cyan-500/25 transition-all disabled:opacity-50"
+                    className="flex items-center gap-2 px-6 py-3 rounded-xl bg-accent text-accent-fg font-semibold transition-all disabled:opacity-50"
                   >
                     {completing ? (
                       <>
@@ -663,7 +663,7 @@ export default function TaskDetailPage() {
               )}
             </div>
           ) : (
-            <p className="text-slate-400">Task not found.</p>
+            <p className="text-fg-muted">Task not found.</p>
           )}
         </div>
       </main>

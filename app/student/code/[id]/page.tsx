@@ -134,20 +134,20 @@ export default function CodePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
+      <div className="min-h-screen bg-canvas flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-accent animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950">
+    <div className="min-h-screen bg-canvas">
       <StudentSidebar />
       <main className="ml-64 p-8">
         <div className="max-w-5xl">
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-2 text-slate-400 hover:text-white transition mb-6"
+            className="flex items-center gap-2 text-fg-muted hover:text-fg transition mb-6"
           >
             <ArrowLeft className="w-4 h-4" />
             Back
@@ -156,24 +156,24 @@ export default function CodePage() {
           {question ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Problem Description */}
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
+              <div className="rounded-2xl border border-line bg-surface p-6 space-y-4">
                 <div>
                   <span className="px-3 py-1 rounded-lg text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
                     {question.difficulty} · CODING
                   </span>
-                  <h1 className="text-xl font-bold text-white mt-3">{question.questionText}</h1>
+                  <h1 className="text-xl font-bold text-fg mt-3">{question.questionText}</h1>
                 </div>
 
                 {question.codeDescription && (
-                  <div className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
+                  <div className="text-sm text-fg-muted leading-relaxed whitespace-pre-wrap">
                     {question.codeDescription}
                   </div>
                 )}
 
                 {question.sampleInput && (
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-400 mb-2">Sample Input</h3>
-                    <pre className="bg-slate-800 rounded-xl p-3 text-sm text-cyan-300 font-mono">
+                    <h3 className="text-sm font-semibold text-fg-muted mb-2">Sample Input</h3>
+                    <pre className="bg-elevated rounded-xl p-3 text-sm text-accent font-mono">
                       {question.sampleInput}
                     </pre>
                   </div>
@@ -181,8 +181,8 @@ export default function CodePage() {
 
                 {question.sampleOutput && (
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-400 mb-2">Sample Output</h3>
-                    <pre className="bg-slate-800 rounded-xl p-3 text-sm text-emerald-300 font-mono">
+                    <h3 className="text-sm font-semibold text-fg-muted mb-2">Sample Output</h3>
+                    <pre className="bg-elevated rounded-xl p-3 text-sm text-emerald-300 font-mono">
                       {question.sampleOutput}
                     </pre>
                   </div>
@@ -190,8 +190,8 @@ export default function CodePage() {
 
                 {question.constraints && (
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-400 mb-2">Constraints</h3>
-                    <p className="text-sm text-slate-300">{question.constraints}</p>
+                    <h3 className="text-sm font-semibold text-fg-muted mb-2">Constraints</h3>
+                    <p className="text-sm text-fg-muted">{question.constraints}</p>
                   </div>
                 )}
 
@@ -214,7 +214,7 @@ export default function CodePage() {
               </div>
 
               {/* Code Editor */}
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
+              <div className="rounded-2xl border border-line bg-surface p-6 space-y-4">
                 {/* Language — locked to the track's language (server-enforced) */}
                 <div className="flex items-center gap-2">
                   {languages.map((lang) => (
@@ -224,15 +224,15 @@ export default function CodePage() {
                       onClick={() => setLanguage(lang)}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
                         language === lang
-                          ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
-                          : "bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600"
+                          ? "bg-accent/20 text-accent border border-accent-line/30"
+                          : "bg-elevated text-fg-muted border border-line hover:border-line"
                       } disabled:cursor-default`}
                     >
                       {lang.charAt(0).toUpperCase() + lang.slice(1)}
                     </button>
                   ))}
                   {languages.length === 1 && (
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs text-fg-muted">
                       This track is {languages[0]} only
                     </span>
                   )}
@@ -242,7 +242,7 @@ export default function CodePage() {
                 <textarea
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
-                  className="w-full h-80 bg-slate-950 border border-slate-700 rounded-xl p-4 font-mono text-sm text-slate-200 focus:outline-none focus:border-cyan-500 resize-none"
+                  className="w-full h-80 bg-canvas border border-line rounded-xl p-4 font-mono text-sm text-fg focus:outline-none focus:border-accent-line resize-none"
                   spellCheck={false}
                 />
 
@@ -250,7 +250,7 @@ export default function CodePage() {
                 <button
                   onClick={handleSubmit}
                   disabled={submitting || !code.trim()}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold hover:shadow-lg transition-all disabled:opacity-50"
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-accent text-accent-fg font-semibold hover:shadow-lg transition-all disabled:opacity-50"
                 >
                   {submitting ? (
                     <>
@@ -285,7 +285,7 @@ export default function CodePage() {
                         {result.passed ? "Passed!" : "Not Passed"} — Score: {result.score}%
                       </span>
                     </div>
-                    <p className="text-sm text-slate-300">{result.feedback}</p>
+                    <p className="text-sm text-fg-muted">{result.feedback}</p>
 
                     {/* Show exactly which expected concepts are missing so the
                         student knows what to fix before retrying. */}
@@ -293,7 +293,7 @@ export default function CodePage() {
                       Array.isArray(result.details?.missingKeywords) &&
                       result.details.missingKeywords.length > 0 && (
                         <div className="mt-3 text-sm">
-                          <p className="text-slate-400 mb-1.5 font-medium">
+                          <p className="text-fg-muted mb-1.5 font-medium">
                             Missing concepts to include:
                           </p>
                           <div className="flex flex-wrap gap-1.5">
@@ -321,8 +321,8 @@ export default function CodePage() {
             </div>
           ) : (
             <div className="text-center py-16">
-              <Code2 className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-              <p className="text-slate-400">No coding challenge available yet.</p>
+              <Code2 className="w-12 h-12 text-fg-muted mx-auto mb-4" />
+              <p className="text-fg-muted">No coding challenge available yet.</p>
             </div>
           )}
         </div>

@@ -81,27 +81,27 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-canvas flex items-center justify-center p-6">
       <div className="w-full max-w-2xl">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-sm font-medium mb-4">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent-subtle border border-accent-line text-accent text-sm font-medium mb-4">
             <Sparkles className="w-4 h-4" />
             Step {step + 1} of {steps.length}
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">{steps[step].title}</h1>
+          <h1 className="text-3xl font-bold text-fg mb-2">{steps[step].title}</h1>
         </div>
 
         {/* Progress Bar */}
-        <div className="w-full bg-slate-800 rounded-full h-2 mb-10">
+        <div className="w-full bg-elevated rounded-full h-2 mb-10">
           <div
-            className="bg-gradient-to-r from-cyan-500 to-blue-600 h-2 rounded-full transition-all duration-500"
+            className="bg-accent h-2 rounded-full transition-all duration-500"
             style={{ width: `${((step + 1) / steps.length) * 100}%` }}
           />
         </div>
 
         {/* Step Content */}
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-8">
+        <div className="rounded-2xl border border-line bg-surface p-8">
           {/* Domain Selection */}
           {step === 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -111,13 +111,13 @@ export default function OnboardingPage() {
                   onClick={() => setForm({ ...form, domain: d.value })}
                   className={`p-5 rounded-xl border text-left transition-all ${
                     form.domain === d.value
-                      ? "border-cyan-500 bg-cyan-500/10 ring-1 ring-cyan-500"
-                      : "border-slate-700 bg-slate-800/50 hover:border-slate-600"
+                      ? "border-accent-line bg-accent-subtle ring-1 ring-accent"
+                      : "border-line bg-elevated hover:border-line"
                   }`}
                 >
                   <span className="text-2xl">{d.icon}</span>
-                  <h3 className="text-lg font-bold text-white mt-2">{d.label}</h3>
-                  <p className="text-sm text-slate-400">{d.desc}</p>
+                  <h3 className="text-lg font-bold text-fg mt-2">{d.label}</h3>
+                  <p className="text-sm text-fg-muted">{d.desc}</p>
                 </button>
               ))}
             </div>
@@ -132,13 +132,13 @@ export default function OnboardingPage() {
                   onClick={() => setForm({ ...form, currentLevel: l.value })}
                   className={`p-6 rounded-xl border text-left transition-all ${
                     form.currentLevel === l.value
-                      ? "border-cyan-500 bg-cyan-500/10 ring-1 ring-cyan-500"
-                      : "border-slate-700 bg-slate-800/50 hover:border-slate-600"
+                      ? "border-accent-line bg-accent-subtle ring-1 ring-accent"
+                      : "border-line bg-elevated hover:border-line"
                   }`}
                 >
-                  <GraduationCap className="w-8 h-8 text-cyan-400 mb-3" />
-                  <h3 className="text-lg font-bold text-white">{l.label}</h3>
-                  <p className="text-sm text-slate-400">{l.desc}</p>
+                  <GraduationCap className="w-8 h-8 text-accent mb-3" />
+                  <h3 className="text-lg font-bold text-fg">{l.label}</h3>
+                  <p className="text-sm text-fg-muted">{l.desc}</p>
                 </button>
               ))}
             </div>
@@ -153,13 +153,13 @@ export default function OnboardingPage() {
                   onClick={() => setForm({ ...form, weeklyHours: h })}
                   className={`p-6 rounded-xl border text-center transition-all ${
                     form.weeklyHours === h
-                      ? "border-cyan-500 bg-cyan-500/10 ring-1 ring-cyan-500"
-                      : "border-slate-700 bg-slate-800/50 hover:border-slate-600"
+                      ? "border-accent-line bg-accent-subtle ring-1 ring-accent"
+                      : "border-line bg-elevated hover:border-line"
                   }`}
                 >
-                  <Clock className="w-6 h-6 text-cyan-400 mx-auto mb-2" />
-                  <span className="text-2xl font-bold text-white">{h}</span>
-                  <p className="text-sm text-slate-400">hrs/week</p>
+                  <Clock className="w-6 h-6 text-accent mx-auto mb-2" />
+                  <span className="text-2xl font-bold text-fg">{h}</span>
+                  <p className="text-sm text-fg-muted">hrs/week</p>
                 </button>
               ))}
             </div>
@@ -174,13 +174,13 @@ export default function OnboardingPage() {
                   onClick={() => setForm({ ...form, targetWeeks: w })}
                   className={`p-6 rounded-xl border text-center transition-all ${
                     form.targetWeeks === w
-                      ? "border-cyan-500 bg-cyan-500/10 ring-1 ring-cyan-500"
-                      : "border-slate-700 bg-slate-800/50 hover:border-slate-600"
+                      ? "border-accent-line bg-accent-subtle ring-1 ring-accent"
+                      : "border-line bg-elevated hover:border-line"
                   }`}
                 >
-                  <Target className="w-6 h-6 text-cyan-400 mx-auto mb-2" />
-                  <span className="text-2xl font-bold text-white">{w}</span>
-                  <p className="text-sm text-slate-400">weeks</p>
+                  <Target className="w-6 h-6 text-accent mx-auto mb-2" />
+                  <span className="text-2xl font-bold text-fg">{w}</span>
+                  <p className="text-sm text-fg-muted">weeks</p>
                 </button>
               ))}
             </div>
@@ -195,13 +195,13 @@ export default function OnboardingPage() {
                   onClick={() => setForm({ ...form, learningStyle: s.value })}
                   className={`p-6 rounded-xl border text-center transition-all ${
                     form.learningStyle === s.value
-                      ? "border-cyan-500 bg-cyan-500/10 ring-1 ring-cyan-500"
-                      : "border-slate-700 bg-slate-800/50 hover:border-slate-600"
+                      ? "border-accent-line bg-accent-subtle ring-1 ring-accent"
+                      : "border-line bg-elevated hover:border-line"
                   }`}
                 >
                   <span className="text-3xl">{s.icon}</span>
-                  <h3 className="text-lg font-bold text-white mt-3">{s.label}</h3>
-                  <p className="text-sm text-slate-400">{s.desc}</p>
+                  <h3 className="text-lg font-bold text-fg mt-3">{s.label}</h3>
+                  <p className="text-sm text-fg-muted">{s.desc}</p>
                 </button>
               ))}
             </div>
@@ -213,7 +213,7 @@ export default function OnboardingPage() {
           <button
             onClick={() => setStep(Math.max(0, step - 1))}
             disabled={step === 0}
-            className="flex items-center gap-2 px-6 py-3 rounded-xl border border-slate-700 text-slate-300 hover:bg-slate-800 transition-all disabled:opacity-30"
+            className="flex items-center gap-2 px-6 py-3 rounded-xl border border-line text-fg-muted hover:bg-elevated transition-all disabled:opacity-30"
           >
             <ArrowLeft className="w-4 h-4" />
             Back
@@ -223,7 +223,7 @@ export default function OnboardingPage() {
             <button
               onClick={() => setStep(step + 1)}
               disabled={!canProceed()}
-              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold hover:shadow-lg hover:shadow-cyan-500/25 transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-accent text-accent-fg font-semibold transition-all disabled:opacity-50"
             >
               Next
               <ArrowRight className="w-4 h-4" />
@@ -232,7 +232,7 @@ export default function OnboardingPage() {
             <button
               onClick={handleSubmit}
               disabled={loading}
-              className="flex items-center gap-2 px-8 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold hover:shadow-lg hover:shadow-cyan-500/25 transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-8 py-3 rounded-xl bg-accent text-accent-fg font-semibold transition-all disabled:opacity-50"
             >
               {loading ? (
                 <>

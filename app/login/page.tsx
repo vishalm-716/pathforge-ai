@@ -3,25 +3,27 @@
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { Brain } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-canvas flex items-center justify-center p-6">
+      <ThemeToggle className="fixed right-5 top-5 z-10" />
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
-              <Brain className="w-7 h-7 text-white" />
+            <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center">
+              <Brain className="w-7 h-7 text-accent-fg" />
             </div>
-            <span className="text-2xl font-bold text-white">PathForge AI</span>
+            <span className="text-2xl font-bold text-fg">PathForge</span>
           </Link>
-          <h1 className="text-2xl font-bold text-white mb-2">Welcome back</h1>
-          <p className="text-slate-400">Sign in to continue your learning journey</p>
+          <h1 className="text-2xl font-bold text-fg mb-2">Welcome back</h1>
+          <p className="text-fg-muted">Sign in to continue your learning journey</p>
         </div>
 
         {/* Card */}
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-8 space-y-6">
+        <div className="rounded-2xl border border-line bg-surface p-8 space-y-6">
           {/* Google Sign In */}
           <button
             onClick={() => signIn("google", { callbackUrl: "/student/dashboard" })}
@@ -48,7 +50,7 @@ export default function LoginPage() {
             Continue with Google
           </button>
 
-          <div className="text-center text-sm text-slate-500">
+          <div className="text-center text-sm text-fg-muted">
             Student accounts use Google sign-in only
           </div>
         </div>
@@ -57,7 +59,7 @@ export default function LoginPage() {
         <div className="text-center mt-6">
           <Link
             href="/admin/login"
-            className="text-sm text-slate-500 hover:text-slate-300 transition"
+            className="text-sm text-fg-muted hover:text-fg-muted transition"
           >
             Admin Login →
           </Link>

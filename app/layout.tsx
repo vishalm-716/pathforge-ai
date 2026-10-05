@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { themeInitScript } from "@/components/ThemeToggle";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "PathForge AI — A coding path that adapts to how you learn",
+  title: "PathForge — a coding path built from your actual results",
   description:
-    "PathForge AI is an outcome-first, explainable, closed-loop coding learning agent that helps CSE students turn coding intention into measurable mastery.",
+    "PathForge turns scattered coding intention into a measurable path: curated lessons, quizzes and challenges, and a plan that adapts when you fall behind.",
 };
 
 export default function RootLayout({
@@ -16,8 +17,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${inter.className} bg-slate-950 text-white antialiased`}>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
+      <body className={`${inter.variable} font-sans bg-canvas text-fg`}>
         {children}
       </body>
     </html>

@@ -12,6 +12,7 @@ import {
   Brain,
   Shield,
 } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const navItems = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -25,15 +26,15 @@ export default function AdminSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-slate-900 border-r border-slate-700/50 flex flex-col">
-      <div className="p-6 border-b border-slate-700/50">
+    <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-surface border-r border-line flex flex-col">
+      <div className="p-6 border-b border-line">
         <Link href="/admin/dashboard" className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
-            <Shield className="w-6 h-6 text-white" />
+          <div className="w-10 h-10 rounded-xl bg-fg text-canvas flex items-center justify-center">
+            <Shield className="w-6 h-6 text-fg" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-white">PathForge</h1>
-            <p className="text-xs text-purple-400">Admin Panel</p>
+            <h1 className="text-lg font-bold text-fg">PathForge</h1>
+            <p className="text-xs text-accent">Admin Panel</p>
           </div>
         </Link>
       </div>
@@ -48,8 +49,8 @@ export default function AdminSidebar() {
               href={item.href}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
                 isActive
-                  ? "bg-purple-500/10 text-purple-400 border border-purple-500/20"
-                  : "text-slate-400 hover:text-white hover:bg-slate-800"
+                  ? "bg-fg/10 text-accent border border-line-strong/20"
+                  : "text-fg-muted hover:text-fg hover:bg-elevated"
               }`}
             >
               <Icon className="w-5 h-5" />
@@ -59,10 +60,14 @@ export default function AdminSidebar() {
         })}
       </nav>
 
-      <div className="p-4 border-t border-slate-700/50">
+      <div className="p-4 border-t border-line">
+        <div className="mb-2 flex items-center justify-between px-1">
+          <span className="text-xs font-medium text-fg-subtle">Appearance</span>
+          <ThemeToggle />
+        </div>
         <Link
           href="/api/auth/signout"
-          className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
+          className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-fg-muted hover:text-danger hover:bg-danger-subtle transition-colors"
         >
           <LogOut className="w-5 h-5" />
           Sign Out

@@ -45,16 +45,16 @@ export default function PlanPage() {
   };
 
   const statusColor: Record<string, string> = {
-    NOT_STARTED: "text-slate-500 border-slate-700 bg-slate-800/50",
-    IN_PROGRESS: "text-blue-400 border-blue-500/30 bg-blue-500/10",
+    NOT_STARTED: "text-fg-muted border-line bg-elevated",
+    IN_PROGRESS: "text-info border-blue-500/30 bg-blue-500/10",
     COMPLETED: "text-emerald-400 border-emerald-500/30 bg-emerald-500/10",
-    SKIPPED: "text-slate-500 border-slate-700 bg-slate-800/50",
+    SKIPPED: "text-fg-muted border-line bg-elevated",
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
+      <div className="min-h-screen bg-canvas flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-accent animate-spin" />
       </div>
     );
   }
@@ -62,14 +62,14 @@ export default function PlanPage() {
   const plan = data?.plan;
 
   return (
-    <div className="min-h-screen bg-slate-950">
+    <div className="min-h-screen bg-canvas">
       <StudentSidebar />
       <main className="ml-64 p-8">
         <div className="max-w-4xl">
           <div className="mb-8">
-            <h1 className="text-2xl font-bold text-white mb-2">Learning Plan</h1>
+            <h1 className="text-2xl font-bold text-fg mb-2">Learning Plan</h1>
             {plan && (
-              <div className="flex items-center gap-6 text-sm text-slate-400">
+              <div className="flex items-center gap-6 text-sm text-fg-muted">
                 <span>🎯 {plan.goal}</span>
                 <span>📅 {plan.targetDuration} weeks</span>
                 <span>📊 {plan.overallProgress}% complete</span>
@@ -79,18 +79,18 @@ export default function PlanPage() {
 
           {/* Progress Bar */}
           {plan && (
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6 mb-8">
+            <div className="rounded-2xl border border-line bg-surface p-6 mb-8">
               <div className="flex justify-between text-sm mb-2">
-                <span className="text-slate-400">Overall Progress</span>
-                <span className="text-white font-medium">{plan.overallProgress}%</span>
+                <span className="text-fg-muted">Overall Progress</span>
+                <span className="text-fg font-medium">{plan.overallProgress}%</span>
               </div>
-              <div className="w-full bg-slate-800 rounded-full h-3">
+              <div className="w-full bg-elevated rounded-full h-3">
                 <div
-                  className="bg-gradient-to-r from-cyan-500 to-blue-600 h-3 rounded-full transition-all"
+                  className="bg-accent h-3 rounded-full transition-all"
                   style={{ width: `${plan.overallProgress}%` }}
                 />
               </div>
-              <div className="flex justify-between text-xs text-slate-500 mt-2">
+              <div className="flex justify-between text-xs text-fg-muted mt-2">
                 <span>{Math.round(plan.completedMinutes / 60)}h completed</span>
                 <span>{Math.round(plan.plannedMinutes / 60)}h planned</span>
               </div>
@@ -102,17 +102,17 @@ export default function PlanPage() {
             <div key={milestone.id} className="mb-4">
               <button
                 onClick={() => toggleWeek(milestone.weekNumber)}
-                className="w-full flex items-center justify-between p-5 rounded-2xl border border-slate-800 bg-slate-900/50 hover:bg-slate-800/50 transition"
+                className="w-full flex items-center justify-between p-5 rounded-2xl border border-line bg-surface hover:bg-elevated transition"
               >
                 <div className="flex items-center gap-4">
                   {milestone.isCompleted ? (
                     <CheckCircle2 className="w-6 h-6 text-emerald-400" />
                   ) : (
-                    <div className="w-6 h-6 rounded-full border-2 border-slate-600" />
+                    <div className="w-6 h-6 rounded-full border-2 border-line" />
                   )}
                   <div className="text-left">
-                    <h3 className="font-bold text-white">{milestone.title}</h3>
-                    <p className="text-sm text-slate-400">
+                    <h3 className="font-bold text-fg">{milestone.title}</h3>
+                    <p className="text-sm text-fg-muted">
                       Due: {new Date(milestone.dueDate).toLocaleDateString()} ·{" "}
                       {milestone.tasks.filter((t: any) => t.status === "COMPLETED").length}/
                       {milestone.tasks.length} tasks
@@ -120,9 +120,9 @@ export default function PlanPage() {
                   </div>
                 </div>
                 {expandedWeeks.has(milestone.weekNumber) ? (
-                  <ChevronDown className="w-5 h-5 text-slate-400" />
+                  <ChevronDown className="w-5 h-5 text-fg-muted" />
                 ) : (
-                  <ChevronRight className="w-5 h-5 text-slate-400" />
+                  <ChevronRight className="w-5 h-5 text-fg-muted" />
                 )}
               </button>
 
@@ -140,15 +140,15 @@ export default function PlanPage() {
                             ? `/student/code/${task.id}`
                             : `/student/tasks/${task.id}`
                         }
-                        className="flex items-center justify-between p-4 rounded-xl border border-slate-800 hover:bg-slate-800/50 transition group"
+                        className="flex items-center justify-between p-4 rounded-xl border border-line hover:bg-elevated transition group"
                       >
                         <div className="flex items-center gap-3">
-                          <Icon className={`w-4 h-4 ${task.status === "COMPLETED" ? "text-emerald-400" : "text-slate-400"}`} />
+                          <Icon className={`w-4 h-4 ${task.status === "COMPLETED" ? "text-emerald-400" : "text-fg-muted"}`} />
                           <div>
-                            <p className={`text-sm font-medium ${task.status === "COMPLETED" ? "text-emerald-400 line-through" : "text-white"} group-hover:text-cyan-400 transition`}>
+                            <p className={`text-sm font-medium ${task.status === "COMPLETED" ? "text-emerald-400 line-through" : "text-fg"} group-hover:text-accent transition`}>
                               {task.title}
                             </p>
-                            <p className="text-xs text-slate-500">
+                            <p className="text-xs text-fg-muted">
                               {task.topic} · {task.estimatedMinutes} min · Due{" "}
                               {new Date(task.dueDate).toLocaleDateString()}
                             </p>
@@ -167,9 +167,9 @@ export default function PlanPage() {
 
           {!plan && (
             <div className="text-center py-16">
-              <Brain className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-              <p className="text-slate-400">No learning plan yet. Complete onboarding first.</p>
-              <Link href="/student/onboarding" className="text-cyan-400 hover:text-cyan-300 mt-2 inline-block">
+              <Brain className="w-12 h-12 text-fg-muted mx-auto mb-4" />
+              <p className="text-fg-muted">No learning plan yet. Complete onboarding first.</p>
+              <Link href="/student/onboarding" className="text-accent hover:text-accent mt-2 inline-block">
                 Start Onboarding →
               </Link>
             </div>

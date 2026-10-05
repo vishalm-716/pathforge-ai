@@ -31,20 +31,20 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-canvas flex items-center justify-center p-6">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
-              <Shield className="w-7 h-7 text-white" />
+            <div className="w-12 h-12 rounded-xl bg-fg text-canvas flex items-center justify-center">
+              <Shield className="w-7 h-7 text-fg" />
             </div>
-            <span className="text-2xl font-bold text-white">PathForge AI</span>
+            <span className="text-2xl font-bold text-fg">PathForge AI</span>
           </Link>
-          <h1 className="text-2xl font-bold text-white mb-2">Admin Login</h1>
-          <p className="text-slate-400">Sign in to the admin panel</p>
+          <h1 className="text-2xl font-bold text-fg mb-2">Admin Login</h1>
+          <p className="text-fg-muted">Sign in to the admin panel</p>
         </div>
 
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-8">
+        <div className="rounded-2xl border border-line bg-surface p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
               <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
@@ -53,28 +53,28 @@ export default function AdminLoginPage() {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-fg-muted mb-2">
                 Email
               </label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                className="w-full px-4 py-3 rounded-xl bg-elevated border border-line text-fg placeholder-fg-subtle focus:outline-none focus:border-line-strong focus:ring-1 focus:ring-accent"
                 placeholder="admin@pathforge.ai"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-fg-muted mb-2">
                 Password
               </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                className="w-full px-4 py-3 rounded-xl bg-elevated border border-line text-fg placeholder-fg-subtle focus:outline-none focus:border-line-strong focus:ring-1 focus:ring-accent"
                 placeholder="••••••••"
                 required
               />
@@ -83,7 +83,7 @@ export default function AdminLoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-500 to-pink-600 text-white font-semibold hover:shadow-lg hover:shadow-purple-500/25 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full py-3.5 rounded-xl bg-fg text-canvas hover:opacity-90 text-fg font-semibold   transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
@@ -100,7 +100,7 @@ export default function AdminLoginPage() {
         <div className="text-center mt-6">
           <Link
             href="/login"
-            className="text-sm text-slate-500 hover:text-slate-300 transition"
+            className="text-sm text-fg-muted hover:text-fg-muted transition"
           >
             ← Student Login
           </Link>

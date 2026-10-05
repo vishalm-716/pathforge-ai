@@ -1,73 +1,195 @@
 @import "tailwindcss";
 
+/* Dark mode is class-driven (not media-driven) so the user's explicit
+   choice wins over the OS setting. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ── Semantic tokens ──────────────────────────────────────────────────────
+   Every surface in the app maps to one of these instead of a raw Tailwind
+   colour. Light is the default; `.dark` overrides the same variable names so
+   a single set of utilities works in both themes. */
 :root {
-  --foreground: #f8fafc;
-  --background: #020617;
+  --canvas: #ffffff;
+  --canvas-subtle: #f7f8f7;
+  --surface: #ffffff;
+  --surface-hover: #f4f6f5;
+  --elevated: #f1f4f2;
+
+  --line: #e2e8e4;
+  --line-strong: #cbd5cf;
+
+  --fg: #101614;
+  --fg-muted: #5b6862;
+  --fg-subtle: #8a968f;
+
+  --accent: #047857;
+  --accent-hover: #065f46;
+  --accent-fg: #ffffff;
+  --accent-subtle: #ecfdf5;
+  --accent-line: #a7f3d0;
+
+  --danger: #b42318;
+  --danger-subtle: #fef3f2;
+  --warning: #b54708;
+  --warning-subtle: #fffaeb;
+  --success: #027a48;
+  --success-subtle: #ecfdf3;
+  --info: #175cd3;
+  --info-subtle: #eff8ff;
+
+  --ring: #10b981;
+}
+
+.dark {
+  --canvas: #0b0f0d;
+  --canvas-subtle: #0e1411;
+  --surface: #121a16;
+  --surface-hover: #17211c;
+  --elevated: #1c2620;
+
+  --line: #24312a;
+  --line-strong: #35453b;
+
+  --fg: #eef3f0;
+  --fg-muted: #a3b1aa;
+  --fg-subtle: #74857c;
+
+  --accent: #34d399;
+  --accent-hover: #6ee7b7;
+  --accent-fg: #062018;
+  --accent-subtle: #0d2620;
+  --accent-line: #1d4d3c;
+
+  --danger: #fda29b;
+  --danger-subtle: #2a1513;
+  --warning: #fec84b;
+  --warning-subtle: #2a1f0a;
+  --success: #6ce9a6;
+  --success-subtle: #0c2418;
+  --info: #84adff;
+  --info-subtle: #101a2e;
+
+  --ring: #34d399;
+}
+
+/* `@theme inline` keeps the utilities pointing at the live variable, so
+   `bg-surface` follows the theme without needing a `dark:` twin. */
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-canvas-subtle: var(--canvas-subtle);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-elevated: var(--elevated);
+
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-subtle: var(--accent-subtle);
+  --color-accent-line: var(--accent-line);
+
+  --color-danger: var(--danger);
+  --color-danger-subtle: var(--danger-subtle);
+  --color-warning: var(--warning);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-success: var(--success);
+  --color-success-subtle: var(--success-subtle);
+  --color-info: var(--info);
+  --color-info-subtle: var(--info-subtle);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  color-scheme: light;
+}
+.dark html,
+html.dark {
+  color-scheme: dark;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
+  background-color: var(--canvas);
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Custom scrollbar */
+/* Visible focus for keyboard users on every interactive element. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Theme-appropriate scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 10px;
+  height: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: #0f172a;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 3px;
+  background: var(--line-strong);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: var(--fg-subtle);
+  background-clip: content-box;
 }
 
-/* Gradient text */
-.gradient-text {
-  background: linear-gradient(135deg, #06b6d4, #3b82f6, #8b5cf6);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+/* Transitions are opt-in per component. A global `*` transition (the previous
+   approach) made every element animate on layout changes and hurt scroll. */
+.card-hover {
+  transition: background-color 150ms ease, border-color 150ms ease,
+    transform 150ms ease, box-shadow 150ms ease;
 }
-
-/* Glow effect */
-.glow-cyan {
-  box-shadow: 0 0 20px rgba(6, 182, 212, 0.15), 0 0 60px rgba(6, 182, 212, 0.05);
-}
-
-.glow-purple {
-  box-shadow: 0 0 20px rgba(139, 92, 246, 0.15), 0 0 60px rgba(139, 92, 246, 0.05);
-}
-
-/* Smooth transitions */
-* {
-  transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
-}
-
-/* Card hover effect */
 .card-hover:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px -12px rgb(0 0 0 / 0.25);
 }
 
-/* Loading spinner */
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 .animate-spin {
   animation: spin 1s linear infinite;
 }
 
-/* Pulse animation for notifications */
 @keyframes pulse-dot {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
 }
 .pulse-dot {
   animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

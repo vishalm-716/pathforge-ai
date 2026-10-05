@@ -60,7 +60,7 @@ export default function AgentInsightCard({ insight, onRespond }: InsightCardProp
 
   if (responded) {
     return (
-      <div className="rounded-2xl border border-slate-700/50 bg-slate-800/50 p-6">
+      <div className="rounded-2xl border border-line bg-elevated p-6">
         <div className="flex items-center gap-3 text-emerald-400">
           <Check className="w-5 h-5" />
           <span className="font-medium">Response recorded. Your plan has been updated.</span>
@@ -74,24 +74,24 @@ export default function AgentInsightCard({ insight, onRespond }: InsightCardProp
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center`}>
-            <Brain className="w-5 h-5 text-purple-400" />
+          <div className={`w-10 h-10 rounded-xl bg-elevated flex items-center justify-center`}>
+            <Brain className="w-5 h-5 text-accent" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-purple-400">PathForge Agent Insight</h3>
+            <h3 className="text-sm font-semibold text-accent">PathForge Agent Insight</h3>
             <p className={`text-lg font-bold ${config.color}`}>{config.label}</p>
           </div>
         </div>
         <button
           onClick={() => setExpanded(!expanded)}
-          className="text-slate-400 hover:text-white transition"
+          className="text-fg-muted hover:text-fg transition"
         >
           {expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
         </button>
       </div>
 
       {/* Signal */}
-      <div className="flex items-center gap-2 text-sm text-slate-300">
+      <div className="flex items-center gap-2 text-sm text-fg-muted">
         <Icon className={`w-4 h-4 ${config.color}`} />
         <span>{insight.signal}</span>
       </div>
@@ -99,17 +99,17 @@ export default function AgentInsightCard({ insight, onRespond }: InsightCardProp
       {expanded && (
         <>
           {/* Explanation */}
-          <div className="bg-slate-900/50 rounded-xl p-4 text-sm text-slate-300 leading-relaxed">
+          <div className="bg-surface rounded-xl p-4 text-sm text-fg-muted leading-relaxed">
             {insight.explanation}
           </div>
 
           {/* Recommended Changes */}
           {changes.length > 0 && (
             <div className="space-y-2">
-              <h4 className="text-sm font-semibold text-slate-400">Recommended Changes</h4>
+              <h4 className="text-sm font-semibold text-fg-muted">Recommended Changes</h4>
               {changes.map((change, idx) => (
-                <div key={idx} className="flex items-start gap-2 text-sm text-slate-300">
-                  <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 mt-2 shrink-0" />
+                <div key={idx} className="flex items-start gap-2 text-sm text-fg-muted">
+                  <div className="w-1.5 h-1.5 rounded-full bg-accent mt-2 shrink-0" />
                   {change.description}
                 </div>
               ))}
@@ -129,7 +129,7 @@ export default function AgentInsightCard({ insight, onRespond }: InsightCardProp
             <button
               onClick={() => handleRespond("RESCHEDULED")}
               disabled={loading}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/30 hover:bg-blue-500/30 transition-all text-sm font-medium disabled:opacity-50"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-500/20 text-info border border-blue-500/30 hover:bg-blue-500/30 transition-all text-sm font-medium disabled:opacity-50"
             >
               <Calendar className="w-4 h-4" />
               Reschedule

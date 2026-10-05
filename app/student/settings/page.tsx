@@ -120,8 +120,8 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
+      <div className="min-h-screen bg-canvas flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-accent animate-spin" />
       </div>
     );
   }
@@ -139,32 +139,32 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950">
+    <div className="min-h-screen bg-canvas">
       <StudentSidebar />
       <main className="ml-64 p-8">
         <div className="max-w-2xl">
-          <h1 className="text-2xl font-bold text-white mb-8 flex items-center gap-3">
-            <Settings className="w-6 h-6 text-slate-400" />
+          <h1 className="text-2xl font-bold text-fg mb-8 flex items-center gap-3">
+            <Settings className="w-6 h-6 text-fg-muted" />
             Settings
           </h1>
 
           <div className="space-y-6">
             {/* ── Account Section ──────────────────────────────── */}
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
-              <h2 className="text-sm font-semibold text-slate-400 mb-4 flex items-center gap-2">
+            <div className="rounded-2xl border border-line bg-surface p-6">
+              <h2 className="text-sm font-semibold text-fg-muted mb-4 flex items-center gap-2">
                 <User className="w-4 h-4" />
                 Account
               </h2>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs text-slate-500 mb-1">Display Name</label>
-                  <p className="px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 text-sm">
+                  <label className="block text-xs text-fg-muted mb-1">Display Name</label>
+                  <p className="px-4 py-2.5 rounded-xl bg-elevated border border-line text-fg-muted text-sm">
                     {userName || "—"}
                   </p>
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-500 mb-1">Email</label>
-                  <p className="px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 text-sm">
+                  <label className="block text-xs text-fg-muted mb-1">Email</label>
+                  <p className="px-4 py-2.5 rounded-xl bg-elevated border border-line text-fg-muted text-sm">
                     {userEmail || "—"}
                   </p>
                 </div>
@@ -172,17 +172,17 @@ export default function SettingsPage() {
             </div>
 
             {/* ── Current Subject / Track ──────────────────────── */}
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
-              <h2 className="text-sm font-semibold text-slate-400 mb-4 flex items-center gap-2">
+            <div className="rounded-2xl border border-line bg-surface p-6">
+              <h2 className="text-sm font-semibold text-fg-muted mb-4 flex items-center gap-2">
                 <BookOpen className="w-4 h-4" />
                 Current Subject
               </h2>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-white font-medium">
+                  <p className="text-fg font-medium">
                     {currentTrack?.title || DOMAINS.find((d) => d.value === currentDomain)?.desc || "No active track"}
                   </p>
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-xs text-fg-muted mt-1">
                     {currentTrack ? `Slug: ${currentTrack.slug}` : "Complete onboarding to start a track"}
                   </p>
                 </div>
@@ -201,11 +201,11 @@ export default function SettingsPage() {
             </div>
 
             {/* ── Weekly Study Hours ──────────────────────────── */}
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+            <div className="rounded-2xl border border-line bg-surface p-6">
+              <label className="block text-sm font-medium text-fg-muted mb-2">
                 Available weekly study hours
               </label>
-              <p className="text-xs text-slate-500 mb-3">
+              <p className="text-xs text-fg-muted mb-3">
                 Adjusting this affects how PathForge AI schedules your upcoming tasks.
               </p>
               <div className="flex items-center gap-4">
@@ -215,17 +215,17 @@ export default function SettingsPage() {
                   max={20}
                   value={weeklyHours}
                   onChange={(e) => setWeeklyHours(parseInt(e.target.value))}
-                  className="flex-1 accent-cyan-500"
+                  className="flex-1 accent-accent"
                 />
-                <span className="text-2xl font-bold text-white w-16 text-center">
+                <span className="text-2xl font-bold text-fg w-16 text-center">
                   {weeklyHours}h
                 </span>
               </div>
             </div>
 
             {/* ── Learning Pace ───────────────────────────────── */}
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
-              <h2 className="text-sm font-semibold text-slate-400 mb-4 flex items-center gap-2">
+            <div className="rounded-2xl border border-line bg-surface p-6">
+              <h2 className="text-sm font-semibold text-fg-muted mb-4 flex items-center gap-2">
                 <Gauge className="w-4 h-4" />
                 Preferred Learning Pace
               </h2>
@@ -236,33 +236,33 @@ export default function SettingsPage() {
                     onClick={() => setLearningPace(opt.value)}
                     className={`p-4 rounded-xl border text-left transition-all ${
                       learningPace === opt.value
-                        ? "border-cyan-500 bg-cyan-500/10 ring-1 ring-cyan-500"
-                        : "border-slate-700 bg-slate-800/50 hover:border-slate-600"
+                        ? "border-accent-line bg-accent-subtle ring-1 ring-accent"
+                        : "border-line bg-elevated hover:border-line"
                     }`}
                   >
-                    <p className="font-medium text-white text-sm">{opt.label}</p>
-                    <p className="text-xs text-slate-400 mt-1">{opt.desc}</p>
+                    <p className="font-medium text-fg text-sm">{opt.label}</p>
+                    <p className="text-xs text-fg-muted mt-1">{opt.desc}</p>
                   </button>
                 ))}
               </div>
             </div>
 
             {/* ── Notification Preferences ────────────────────── */}
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
-              <h2 className="text-sm font-semibold text-slate-400 mb-4 flex items-center gap-2">
+            <div className="rounded-2xl border border-line bg-surface p-6">
+              <h2 className="text-sm font-semibold text-fg-muted mb-4 flex items-center gap-2">
                 <Bell className="w-4 h-4" />
                 Notification Preferences
               </h2>
               <div className="space-y-4">
                 <label className="flex items-center justify-between cursor-pointer">
                   <div>
-                    <p className="text-sm text-white">Task Reminders</p>
-                    <p className="text-xs text-slate-500">Get reminders about upcoming tasks</p>
+                    <p className="text-sm text-fg">Task Reminders</p>
+                    <p className="text-xs text-fg-muted">Get reminders about upcoming tasks</p>
                   </div>
                   <button
                     onClick={() => setNotifyTaskReminders(!notifyTaskReminders)}
                     className={`w-11 h-6 rounded-full transition-colors relative ${
-                      notifyTaskReminders ? "bg-cyan-500" : "bg-slate-700"
+                      notifyTaskReminders ? "bg-accent" : "bg-elevated"
                     }`}
                   >
                     <span
@@ -274,13 +274,13 @@ export default function SettingsPage() {
                 </label>
                 <label className="flex items-center justify-between cursor-pointer">
                   <div>
-                    <p className="text-sm text-white">Inactivity Nudges</p>
-                    <p className="text-xs text-slate-500">Get nudged when you haven&apos;t practiced</p>
+                    <p className="text-sm text-fg">Inactivity Nudges</p>
+                    <p className="text-xs text-fg-muted">Get nudged when you haven&apos;t practiced</p>
                   </div>
                   <button
                     onClick={() => setNotifyInactivityNudges(!notifyInactivityNudges)}
                     className={`w-11 h-6 rounded-full transition-colors relative ${
-                      notifyInactivityNudges ? "bg-cyan-500" : "bg-slate-700"
+                      notifyInactivityNudges ? "bg-accent" : "bg-elevated"
                     }`}
                   >
                     <span
@@ -294,8 +294,8 @@ export default function SettingsPage() {
             </div>
 
             {/* ── Content Style ───────────────────────────────── */}
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
-              <h2 className="text-sm font-semibold text-slate-400 mb-4 flex items-center gap-2">
+            <div className="rounded-2xl border border-line bg-surface p-6">
+              <h2 className="text-sm font-semibold text-fg-muted mb-4 flex items-center gap-2">
                 <Palette className="w-4 h-4" />
                 Preferred Content Style
               </h2>
@@ -306,12 +306,12 @@ export default function SettingsPage() {
                     onClick={() => setContentStyle(opt.value)}
                     className={`p-4 rounded-xl border text-left transition-all ${
                       contentStyle === opt.value
-                        ? "border-cyan-500 bg-cyan-500/10 ring-1 ring-cyan-500"
-                        : "border-slate-700 bg-slate-800/50 hover:border-slate-600"
+                        ? "border-accent-line bg-accent-subtle ring-1 ring-accent"
+                        : "border-line bg-elevated hover:border-line"
                     }`}
                   >
-                    <p className="font-medium text-white text-sm">{opt.label}</p>
-                    <p className="text-xs text-slate-400 mt-1">{opt.desc}</p>
+                    <p className="font-medium text-fg text-sm">{opt.label}</p>
+                    <p className="text-xs text-fg-muted mt-1">{opt.desc}</p>
                   </button>
                 ))}
               </div>
@@ -322,7 +322,7 @@ export default function SettingsPage() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold hover:shadow-lg hover:shadow-cyan-500/25 transition-all disabled:opacity-50"
+                className="flex items-center gap-2 px-6 py-3 rounded-xl bg-accent text-accent-fg font-semibold transition-all disabled:opacity-50"
               >
                 {saving ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -340,22 +340,22 @@ export default function SettingsPage() {
         {/* ── Switch Track Modal ─────────────────────────────── */}
         {showSwitchModal && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-900 p-6 space-y-5">
+            <div className="w-full max-w-lg rounded-2xl border border-line bg-surface p-6 space-y-5">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold text-white">
+                <h2 className="text-lg font-bold text-fg">
                   {switchStep === "select" ? "Change Subject" : "Confirm Switch"}
                 </h2>
                 <button
                   onClick={() => setShowSwitchModal(false)}
-                  className="p-1.5 rounded-lg hover:bg-slate-800 transition"
+                  className="p-1.5 rounded-lg hover:bg-elevated transition"
                 >
-                  <X className="w-5 h-5 text-slate-400" />
+                  <X className="w-5 h-5 text-fg-muted" />
                 </button>
               </div>
 
               {switchStep === "select" && (
                 <>
-                  <p className="text-sm text-slate-400">
+                  <p className="text-sm text-fg-muted">
                     Select the new subject you want to learn:
                   </p>
                   <div className="grid grid-cols-2 gap-3 max-h-72 overflow-y-auto">
@@ -365,19 +365,19 @@ export default function SettingsPage() {
                         onClick={() => setSelectedNewDomain(d.value)}
                         className={`p-4 rounded-xl border text-left transition-all ${
                           selectedNewDomain === d.value
-                            ? "border-cyan-500 bg-cyan-500/10 ring-1 ring-cyan-500"
-                            : "border-slate-700 bg-slate-800/50 hover:border-slate-600"
+                            ? "border-accent-line bg-accent-subtle ring-1 ring-accent"
+                            : "border-line bg-elevated hover:border-line"
                         }`}
                       >
                         <span className="text-xl">{d.icon}</span>
-                        <p className="font-medium text-white text-sm mt-1">{d.label}</p>
-                        <p className="text-xs text-slate-400">{d.desc}</p>
+                        <p className="font-medium text-fg text-sm mt-1">{d.label}</p>
+                        <p className="text-xs text-fg-muted">{d.desc}</p>
                       </button>
                     ))}
                   </div>
 
                   <div>
-                    <label className="block text-sm text-slate-300 mb-2">Difficulty Level</label>
+                    <label className="block text-sm text-fg-muted mb-2">Difficulty Level</label>
                     <div className="grid grid-cols-2 gap-3">
                       {["BEGINNER", "INTERMEDIATE"].map((lvl) => (
                         <button
@@ -385,8 +385,8 @@ export default function SettingsPage() {
                           onClick={() => setSelectedNewLevel(lvl)}
                           className={`p-3 rounded-xl border text-center transition-all text-sm ${
                             selectedNewLevel === lvl
-                              ? "border-cyan-500 bg-cyan-500/10 ring-1 ring-cyan-500 text-white"
-                              : "border-slate-700 bg-slate-800/50 hover:border-slate-600 text-slate-300"
+                              ? "border-accent-line bg-accent-subtle ring-1 ring-accent text-fg"
+                              : "border-line bg-elevated hover:border-line text-fg-muted"
                           }`}
                         >
                           {lvl === "BEGINNER" ? "Beginner" : "Intermediate"}
@@ -398,7 +398,7 @@ export default function SettingsPage() {
                   <button
                     disabled={!selectedNewDomain}
                     onClick={() => setSwitchStep("confirm")}
-                    className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold hover:shadow-lg transition disabled:opacity-50"
+                    className="w-full py-3 rounded-xl bg-accent text-accent-fg font-semibold hover:shadow-lg transition disabled:opacity-50"
                   >
                     Continue
                   </button>
@@ -420,16 +420,16 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
-                  <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-4 text-sm">
+                  <div className="rounded-xl border border-line bg-elevated p-4 text-sm">
                     <div className="flex justify-between mb-2">
-                      <span className="text-slate-400">New Subject</span>
-                      <span className="text-white font-medium">
+                      <span className="text-fg-muted">New Subject</span>
+                      <span className="text-fg font-medium">
                         {DOMAINS.find((d) => d.value === selectedNewDomain)?.desc}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-400">Difficulty</span>
-                      <span className="text-white font-medium">
+                      <span className="text-fg-muted">Difficulty</span>
+                      <span className="text-fg font-medium">
                         {selectedNewLevel === "BEGINNER" ? "Beginner" : "Intermediate"}
                       </span>
                     </div>
@@ -438,14 +438,14 @@ export default function SettingsPage() {
                   <div className="flex gap-3">
                     <button
                       onClick={() => setSwitchStep("select")}
-                      className="flex-1 py-3 rounded-xl border border-slate-700 text-slate-300 hover:bg-slate-800 transition font-medium"
+                      className="flex-1 py-3 rounded-xl border border-line text-fg-muted hover:bg-elevated transition font-medium"
                     >
                       Back
                     </button>
                     <button
                       onClick={handleSwitchTrack}
                       disabled={switching}
-                      className="flex-1 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold hover:shadow-lg transition disabled:opacity-50 flex items-center justify-center gap-2"
+                      className="flex-1 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-fg font-semibold hover:shadow-lg transition disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                       {switching ? (
                         <>

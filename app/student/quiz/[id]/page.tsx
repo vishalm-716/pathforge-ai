@@ -105,20 +105,20 @@ export default function QuizPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
+      <div className="min-h-screen bg-canvas flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-accent animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950">
+    <div className="min-h-screen bg-canvas">
       <StudentSidebar />
       <main className="ml-64 p-8">
         <div className="max-w-3xl">
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-2 text-slate-400 hover:text-white transition mb-6"
+            className="flex items-center gap-2 text-fg-muted hover:text-fg transition mb-6"
           >
             <ArrowLeft className="w-4 h-4" />
             Back
@@ -126,26 +126,26 @@ export default function QuizPage() {
 
           {results ? (
             /* Results */
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-8 space-y-6">
+            <div className="rounded-2xl border border-line bg-surface p-8 space-y-6">
               <div className="text-center">
-                <BarChart3 className="w-12 h-12 text-purple-400 mx-auto mb-4" />
-                <h1 className="text-3xl font-bold text-white mb-2">Quiz Results</h1>
+                <BarChart3 className="w-12 h-12 text-accent mx-auto mb-4" />
+                <h1 className="text-3xl font-bold text-fg mb-2">Quiz Results</h1>
                 <p className={`text-5xl font-bold mt-4 ${results.score === 100 ? "text-emerald-400" : "text-amber-400"}`}>
                   {results.score}%
                 </p>
-                <p className="text-slate-400 mt-2">
+                <p className="text-fg-muted mt-2">
                   {results.correctCount}/{results.totalQuestions} correct
                 </p>
               </div>
 
-              <div className="space-y-4 pt-6 border-t border-slate-800">
+              <div className="space-y-4 pt-6 border-t border-line">
                 {results.results.map((r: any, idx: number) => {
                   // Skipped / ungradable questions are excluded from the score —
                   // show a distinct label so feedback matches the score.
                   const state = r.unanswered
-                    ? { label: "Not answered", color: "text-slate-400", icon: <XCircle className="w-5 h-5 text-slate-500" />, border: "border-slate-700/50 bg-slate-800/30" }
+                    ? { label: "Not answered", color: "text-fg-muted", icon: <XCircle className="w-5 h-5 text-fg-muted" />, border: "border-line bg-elevated" }
                     : r.notGraded
-                    ? { label: "Not graded", color: "text-slate-400", icon: <XCircle className="w-5 h-5 text-slate-500" />, border: "border-slate-700/50 bg-slate-800/30" }
+                    ? { label: "Not graded", color: "text-fg-muted", icon: <XCircle className="w-5 h-5 text-fg-muted" />, border: "border-line bg-elevated" }
                     : r.isCorrect
                     ? { label: "Correct", color: "text-emerald-400", icon: <CheckCircle2 className="w-5 h-5 text-emerald-400" />, border: "border-emerald-500/20 bg-emerald-500/5" }
                     : { label: "Incorrect", color: "text-red-400", icon: <XCircle className="w-5 h-5 text-red-400" />, border: "border-red-500/20 bg-red-500/5" };
@@ -159,7 +159,7 @@ export default function QuizPage() {
                         </span>
                       </div>
                       {r.explanation && (
-                        <p className="text-sm text-slate-400 ml-7">{r.explanation}</p>
+                        <p className="text-sm text-fg-muted ml-7">{r.explanation}</p>
                       )}
                     </div>
                   );
@@ -168,19 +168,19 @@ export default function QuizPage() {
 
               <button
                 onClick={() => router.push("/student/dashboard")}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold hover:shadow-lg transition-all"
+                className="w-full py-3 rounded-xl bg-accent text-accent-fg font-semibold  transition-all"
               >
                 Back to Dashboard
               </button>
             </div>
           ) : questions.length > 0 ? (
             /* Quiz */
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-8 space-y-6">
+            <div className="rounded-2xl border border-line bg-surface p-8 space-y-6">
               <div className="flex items-center justify-between mb-4">
-                <h1 className="text-xl font-bold text-white">
+                <h1 className="text-xl font-bold text-fg">
                   Quiz: {questions[0]?.topic}
                 </h1>
-                <span className="text-sm text-slate-400">
+                <span className="text-sm text-fg-muted">
                   {currentQ + 1} / {questions.length}
                 </span>
               </div>
@@ -191,16 +191,16 @@ export default function QuizPage() {
               )}
 
               {/* Progress */}
-              <div className="w-full bg-slate-800 rounded-full h-2">
+              <div className="w-full bg-elevated rounded-full h-2">
                 <div
-                  className="bg-purple-500 h-2 rounded-full transition-all"
+                  className="bg-fg h-2 rounded-full transition-all"
                   style={{ width: `${((currentQ + 1) / questions.length) * 100}%` }}
                 />
               </div>
 
               {/* Question */}
               <div className="py-4">
-                <p className="text-lg text-white font-medium mb-6">
+                <p className="text-lg text-fg font-medium mb-6">
                   {questions[currentQ].questionText}
                 </p>
 
@@ -211,11 +211,11 @@ export default function QuizPage() {
                       onClick={() => handleSelect(questions[currentQ].id, idx)}
                       className={`w-full text-left p-4 rounded-xl border transition-all ${
                         answers[questions[currentQ].id] === idx
-                          ? "border-purple-500 bg-purple-500/10 ring-1 ring-purple-500"
-                          : "border-slate-700 bg-slate-800/50 hover:border-slate-600"
+                          ? "border-line-strong bg-fg/10 ring-1 ring-accent"
+                          : "border-line bg-elevated hover:border-line"
                       }`}
                     >
-                      <span className="text-sm text-white">{opt}</span>
+                      <span className="text-sm text-fg">{opt}</span>
                     </button>
                   ))}
                 </div>
@@ -226,7 +226,7 @@ export default function QuizPage() {
                 <button
                   onClick={() => setCurrentQ(Math.max(0, currentQ - 1))}
                   disabled={currentQ === 0}
-                  className="px-5 py-2.5 rounded-xl border border-slate-700 text-slate-300 hover:bg-slate-800 transition disabled:opacity-30"
+                  className="px-5 py-2.5 rounded-xl border border-line text-fg-muted hover:bg-elevated transition disabled:opacity-30"
                 >
                   Previous
                 </button>
@@ -234,7 +234,7 @@ export default function QuizPage() {
                 {currentQ < questions.length - 1 ? (
                   <button
                     onClick={() => setCurrentQ(currentQ + 1)}
-                    className="px-5 py-2.5 rounded-xl bg-purple-500/20 text-purple-400 border border-purple-500/30 hover:bg-purple-500/30 transition font-medium"
+                    className="px-5 py-2.5 rounded-xl bg-elevated text-accent border border-line hover:bg-surface-hover transition font-medium"
                   >
                     Next
                   </button>
@@ -242,7 +242,7 @@ export default function QuizPage() {
                   <button
                     onClick={handleSubmit}
                     disabled={submitting}
-                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-500 to-pink-600 text-white font-semibold hover:shadow-lg transition-all disabled:opacity-50 flex items-center gap-2"
+                    className="px-6 py-2.5 rounded-xl bg-fg text-canvas hover:opacity-90 text-fg font-semibold  transition-all disabled:opacity-50 flex items-center gap-2"
                   >
                     {submitting ? (
                       <>
@@ -265,7 +265,7 @@ export default function QuizPage() {
             </div>
           ) : (
             <div className="text-center py-16">
-              <p className="text-slate-400">No quiz questions available for this topic yet.</p>
+              <p className="text-fg-muted">No quiz questions available for this topic yet.</p>
             </div>
           )}
         </div>

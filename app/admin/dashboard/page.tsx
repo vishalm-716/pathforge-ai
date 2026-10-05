@@ -29,8 +29,8 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
+      <div className="min-h-screen bg-canvas flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-accent animate-spin" />
       </div>
     );
   }
@@ -43,70 +43,70 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950">
+    <div className="min-h-screen bg-canvas">
       <AdminSidebar />
       <main className="ml-64 p-8">
-        <h1 className="text-2xl font-bold text-white mb-8">Admin Dashboard</h1>
+        <h1 className="text-2xl font-bold text-fg mb-8">Admin Dashboard</h1>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {statCards.map((stat) => (
-            <div key={stat.label} className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
+            <div key={stat.label} className="rounded-2xl border border-line bg-surface p-6">
               <div className="flex items-center gap-3 mb-3">
                 <div className={`w-10 h-10 rounded-xl bg-${stat.color}-500/10 flex items-center justify-center`}>
                   <stat.icon className={`w-5 h-5 text-${stat.color}-400`} />
                 </div>
-                <span className="text-sm text-slate-400">{stat.label}</span>
+                <span className="text-sm text-fg-muted">{stat.label}</span>
               </div>
-              <p className="text-3xl font-bold text-white">{stat.count}</p>
+              <p className="text-3xl font-bold text-fg">{stat.count}</p>
             </div>
           ))}
         </div>
 
         {/* Recent Students */}
         {stats?.students?.length > 0 && (
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
-            <h2 className="text-lg font-bold text-white mb-4">Recent Students</h2>
+          <div className="rounded-2xl border border-line bg-surface p-6">
+            <h2 className="text-lg font-bold text-fg mb-4">Recent Students</h2>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-800">
-                    <th className="text-left py-3 px-4 text-slate-400 font-medium">Name</th>
-                    <th className="text-left py-3 px-4 text-slate-400 font-medium">Email</th>
-                    <th className="text-left py-3 px-4 text-slate-400 font-medium">Domain</th>
-                    <th className="text-left py-3 px-4 text-slate-400 font-medium">Progress</th>
-                    <th className="text-left py-3 px-4 text-slate-400 font-medium">Streak</th>
-                    <th className="text-left py-3 px-4 text-slate-400 font-medium">Risk</th>
+                  <tr className="border-b border-line">
+                    <th className="text-left py-3 px-4 text-fg-muted font-medium">Name</th>
+                    <th className="text-left py-3 px-4 text-fg-muted font-medium">Email</th>
+                    <th className="text-left py-3 px-4 text-fg-muted font-medium">Domain</th>
+                    <th className="text-left py-3 px-4 text-fg-muted font-medium">Progress</th>
+                    <th className="text-left py-3 px-4 text-fg-muted font-medium">Streak</th>
+                    <th className="text-left py-3 px-4 text-fg-muted font-medium">Risk</th>
                   </tr>
                 </thead>
                 <tbody>
                   {stats.students.slice(0, 10).map((s: any) => (
-                    <tr key={s.id} className="border-b border-slate-800/50 hover:bg-slate-800/30">
-                      <td className="py-3 px-4 text-white">{s.name || "—"}</td>
-                      <td className="py-3 px-4 text-slate-300">{s.email}</td>
+                    <tr key={s.id} className="border-b border-line hover:bg-elevated">
+                      <td className="py-3 px-4 text-fg">{s.name || "—"}</td>
+                      <td className="py-3 px-4 text-fg-muted">{s.email}</td>
                       <td className="py-3 px-4">
-                        <span className="px-2 py-1 rounded-md bg-cyan-500/10 text-cyan-400 text-xs">
+                        <span className="px-2 py-1 rounded-md bg-accent-subtle text-accent text-xs">
                           {s.domain || "—"}
                         </span>
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2">
-                          <div className="w-20 bg-slate-800 rounded-full h-2">
+                          <div className="w-20 bg-elevated rounded-full h-2">
                             <div
-                              className="bg-cyan-500 h-2 rounded-full"
+                              className="bg-accent h-2 rounded-full"
                               style={{ width: `${s.progress}%` }}
                             />
                           </div>
-                          <span className="text-white text-xs">{s.progress}%</span>
+                          <span className="text-fg text-xs">{s.progress}%</span>
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-white">{s.streak}🔥</td>
+                      <td className="py-3 px-4 text-fg">{s.streak}🔥</td>
                       <td className="py-3 px-4">
                         {s.currentRisk ? (
                           <span className="px-2 py-1 rounded-md bg-amber-500/10 text-amber-400 text-xs">
                             {s.currentRisk.replace(/_/g, " ")}
                           </span>
                         ) : (
-                          <span className="text-slate-500 text-xs">None</span>
+                          <span className="text-fg-muted text-xs">None</span>
                         )}
                       </td>
                     </tr>

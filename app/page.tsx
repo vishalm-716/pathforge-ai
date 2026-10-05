@@ -1,6 +1,5 @@
 import Link from "next/link";
 import {
-  Brain,
   Target,
   TrendingUp,
   Zap,
@@ -11,203 +10,237 @@ import {
   CheckCircle2,
   Shield,
 } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
+
+const FEATURES = [
+  {
+    icon: Target,
+    title: "A plan built around your goal",
+    description:
+      "Pick DSA, Python, JavaScript, React or Java. You get a milestone-based path sized to your level and the hours you actually have each week.",
+    tint: "bg-accent-subtle text-accent",
+  },
+  {
+    icon: BarChart3,
+    title: "Adapts when you slip",
+    description:
+      "Quiz scores, coding submissions, study minutes and streaks feed a rules engine that spots risk early and proposes a concrete change.",
+    tint: "bg-info-subtle text-info",
+  },
+  {
+    icon: Shield,
+    title: "You stay in control",
+    description:
+      "Nothing changes without your approval. Accept, reschedule or reject each recommendation, and the plan only moves when you say so.",
+    tint: "bg-accent-subtle text-accent",
+  },
+  {
+    icon: BookOpen,
+    title: "Curated, not dumped",
+    description:
+      "Every task points at one specific, well-made resource organised by topic and difficulty. No 40-hour playlist roulette.",
+    tint: "bg-warning-subtle text-warning",
+  },
+  {
+    icon: Code2,
+    title: "Practice, not just watching",
+    description:
+      "Topic-scoped quizzes and coding challenges close the loop, so progress is measured by what you can do rather than what you have opened.",
+    tint: "bg-info-subtle text-info",
+  },
+  {
+    icon: TrendingUp,
+    title: "Progress you can see",
+    description:
+      "Streaks, planned versus actual minutes, and per-milestone completion — enough signal to know whether the plan is working.",
+    tint: "bg-accent-subtle text-accent",
+  },
+] as const;
+
+const STEPS = [
+  { step: "01", label: "Set your goal", desc: "Domain, level, hours per week" },
+  { step: "02", label: "Get your plan", desc: "A milestone path, not a pile of links" },
+  { step: "03", label: "Work the plan", desc: "Watch, quiz, submit code" },
+  { step: "04", label: "See the gap", desc: "The agent flags what is slipping" },
+  { step: "05", label: "You decide", desc: "Accept, reschedule, or reject" },
+] as const;
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-slate-950">
-      {/* Navigation */}
-      <nav className="border-b border-slate-800/50 backdrop-blur-xl bg-slate-950/80 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
-              <Brain className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-xl font-bold text-white">PathForge AI</span>
+    <div className="min-h-screen bg-canvas">
+      <nav className="sticky top-0 z-50 border-b border-line bg-canvas/85 backdrop-blur-md">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+          <Link href="/" className="flex items-center gap-2.5">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-accent-fg">
+              <Zap className="h-4 w-4" aria-hidden="true" />
+            </span>
+            <span className="text-[17px] font-semibold tracking-tight text-fg">
+              PathForge
+            </span>
           </Link>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
             <Link
               href="/admin/login"
-              className="text-sm text-slate-400 hover:text-white transition px-4 py-2"
+              className="rounded-lg px-3 py-2 text-sm font-medium text-fg-muted transition-colors hover:bg-surface-hover hover:text-fg"
             >
               Admin
             </Link>
             <Link
               href="/login"
-              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-sm font-semibold hover:shadow-lg hover:shadow-cyan-500/25 transition-all"
+              className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-fg transition-colors hover:bg-accent-hover"
             >
-              Get Started
+              Sign in
             </Link>
           </div>
         </div>
       </nav>
 
       {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/5 via-transparent to-transparent" />
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-cyan-500/5 rounded-full blur-3xl" />
+      <section className="border-b border-line">
+        <div className="mx-auto max-w-6xl px-6 pb-20 pt-16 sm:pb-24 sm:pt-24">
+          <div className="max-w-2xl">
+            <span className="inline-flex items-center gap-2 rounded-full border border-accent-line bg-accent-subtle px-3 py-1 text-[13px] font-medium text-accent">
+              <Zap className="h-3.5 w-3.5" aria-hidden="true" />
+              Built for CSE students
+            </span>
 
-        <div className="relative max-w-7xl mx-auto px-6 pt-24 pb-20">
-          <div className="text-center max-w-4xl mx-auto">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-sm font-medium mb-8">
-              <Zap className="w-4 h-4" />
-              Outcome-first, explainable, closed-loop coding learning agent
-            </div>
-
-            <h1 className="text-5xl md:text-7xl font-bold leading-tight mb-6">
-              <span className="text-white">A coding path that </span>
-              <span className="gradient-text">adapts to how you learn</span>
+            <h1 className="mt-6 text-4xl font-semibold leading-[1.1] tracking-tight text-fg sm:text-5xl">
+              Stop collecting courses.
+              <br />
+              <span className="text-accent">Start finishing them.</span>
             </h1>
 
-            <p className="text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-              PathForge AI is an outcome-first coding learning agent that adapts to real performance.
-              Content is abundant. Completion is scarce. We help CSE students turn coding intention into measurable mastery.
+            <p className="mt-6 max-w-xl text-lg leading-relaxed text-fg-muted">
+              Everyone has the same 40-hour playlist open. Almost nobody
+              finishes it. PathForge turns it into a dated plan, watches how
+              you actually do, and tells you what to change when you fall
+              behind.
             </p>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <Link
                 href="/login"
-                className="px-8 py-4 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold text-lg hover:shadow-xl hover:shadow-cyan-500/25 transition-all flex items-center gap-2"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-6 py-3 font-semibold text-accent-fg transition-colors hover:bg-accent-hover"
               >
-                Start Your Path
-                <ArrowRight className="w-5 h-5" />
+                Start your path
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </Link>
-              <Link
-                href="#features"
-                className="px-8 py-4 rounded-2xl border border-slate-700 text-slate-300 font-medium hover:bg-slate-800 transition-all"
+              <a
+                href="#how"
+                className="inline-flex items-center justify-center rounded-xl border border-line-strong bg-surface px-6 py-3 font-medium text-fg transition-colors hover:bg-surface-hover"
               >
-                See How It Works
-              </Link>
+                See how it works
+              </a>
             </div>
+
+            <ul className="mt-10 flex flex-wrap gap-x-6 gap-y-2 text-sm text-fg-muted">
+              {["No credit card", "Google sign-in", "Adjust anytime"].map((t) => (
+                <li key={t} className="inline-flex items-center gap-1.5">
+                  <CheckCircle2
+                    className="h-4 w-4 text-accent"
+                    aria-hidden="true"
+                  />
+                  {t}
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </section>
 
       {/* Features */}
-      <section id="features" className="py-24 border-t border-slate-800/50">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Not just a course list. A genuine AI agent.
+      <section id="features" className="border-b border-line bg-canvas-subtle">
+        <div className="mx-auto max-w-6xl px-6 py-20">
+          <div className="max-w-2xl">
+            <h2 className="text-3xl font-semibold tracking-tight text-fg">
+              What PathForge actually does
             </h2>
-            <p className="text-slate-400 text-lg max-w-2xl mx-auto">
-              PathForge AI observes your progress, detects risk, and proposes concrete changes to your learning plan — then lets you decide.
+            <p className="mt-3 text-fg-muted">
+              The plan is the product. Everything below exists to keep it
+              honest.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              {
-                icon: Target,
-                title: "Personalized Learning Path",
-                description: "Choose your coding goal — DSA, Python, JavaScript, React, or Java — and get a realistic milestone-based plan tailored to your level and schedule.",
-                color: "cyan",
-              },
-              {
-                icon: BarChart3,
-                title: "Real-Time Adaptation",
-                description: "The agent monitors quiz scores, coding performance, study time, and streaks. When it detects risk, it proposes a concrete plan change with a clear explanation.",
-                color: "purple",
-              },
-              {
-                icon: Shield,
-                title: "Learner Control",
-                description: "Every recommended change requires your approval. Accept, reschedule, or reject — the agent only updates your plan when you say so.",
-                color: "emerald",
-              },
-              {
-                icon: BookOpen,
-                title: "Curated YouTube Resources",
-                description: "No random playlist dumps. Each task links to specific, high-quality YouTube content organized by topic and difficulty.",
-                color: "blue",
-              },
-              {
-                icon: Code2,
-                title: "Coding Challenges & MCQs",
-                description: "Test your understanding with topic-specific quizzes and coding challenges. The agent adapts your path based on your results.",
-                color: "amber",
-              },
-              {
-                icon: TrendingUp,
-                title: "Streaks & Progress Tracking",
-                description: "Track your daily streak, planned vs actual time, and overall completion. Visual progress keeps you motivated and on track.",
-                color: "pink",
-              },
-            ].map((feature, idx) => (
+          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {FEATURES.map((feature) => (
               <div
-                key={idx}
-                className="card-hover rounded-2xl border border-slate-800 bg-slate-900/50 p-8 space-y-4"
+                key={feature.title}
+                className="card-hover rounded-xl border border-line bg-surface p-6"
               >
                 <div
-                  className={`w-12 h-12 rounded-xl bg-${feature.color}-500/10 flex items-center justify-center`}
+                  className={`flex h-10 w-10 items-center justify-center rounded-lg ${feature.tint}`}
                 >
-                  <feature.icon className={`w-6 h-6 text-${feature.color}-400`} />
+                  <feature.icon className="h-5 w-5" aria-hidden="true" />
                 </div>
-                <h3 className="text-xl font-bold text-white">{feature.title}</h3>
-                <p className="text-slate-400 leading-relaxed">{feature.description}</p>
+                <h3 className="mt-4 font-semibold text-fg">{feature.title}</h3>
+                <p className="mt-2 text-[15px] leading-relaxed text-fg-muted">
+                  {feature.description}
+                </p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Agent Loop */}
-      <section className="py-24 border-t border-slate-800/50 bg-slate-900/30">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              The PathForge Agent Loop
+      {/* Loop */}
+      <section id="how" className="border-b border-line">
+        <div className="mx-auto max-w-6xl px-6 py-20">
+          <div className="max-w-2xl">
+            <h2 className="text-3xl font-semibold tracking-tight text-fg">
+              The loop
             </h2>
-            <p className="text-slate-400 text-lg">
-              A closed-loop system that continuously adapts to your learning behavior.
+            <p className="mt-3 text-fg-muted">
+              Five steps that repeat for as long as you are learning.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-4">
-            {[
-              { step: "1", label: "Understand Intent", desc: "Choose your goal and preferences" },
-              { step: "2", label: "Generate Plan", desc: "Get a personalized milestone path" },
-              { step: "3", label: "Observe Progress", desc: "Track quizzes, code, time, streaks" },
-              { step: "4", label: "Detect & Adapt", desc: "Agent proposes plan changes" },
-              { step: "5", label: "Learner Decides", desc: "Accept, reschedule, or reject" },
-            ].map((item, idx) => (
-              <div key={idx} className="text-center space-y-3">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-purple-500/20 border border-slate-700 flex items-center justify-center mx-auto">
-                  <span className="text-xl font-bold gradient-text">{item.step}</span>
-                </div>
-                <h3 className="text-white font-semibold">{item.label}</h3>
-                <p className="text-sm text-slate-400">{item.desc}</p>
-              </div>
+          <ol className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            {STEPS.map((item) => (
+              <li
+                key={item.step}
+                className="rounded-xl border border-line bg-surface p-5"
+              >
+                <span className="font-mono text-sm font-semibold text-accent">
+                  {item.step}
+                </span>
+                <h3 className="mt-3 font-semibold text-fg">{item.label}</h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-fg-muted">
+                  {item.desc}
+                </p>
+              </li>
             ))}
-          </div>
+          </ol>
         </div>
       </section>
 
       {/* CTA */}
-      <section className="py-24 border-t border-slate-800/50">
-        <div className="max-w-3xl mx-auto px-6 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-            Ready to forge your coding path?
+      <section>
+        <div className="mx-auto max-w-3xl px-6 py-20 text-center">
+          <h2 className="text-3xl font-semibold tracking-tight text-fg">
+            Your next semester, planned.
           </h2>
-          <p className="text-slate-400 text-lg mb-10">
-            Join PathForge AI and transform your coding learning from scattered intention to measurable mastery.
+          <p className="mx-auto mt-4 max-w-lg text-fg-muted">
+            Sign in, pick a track, and get a dated plan in about two minutes.
           </p>
           <Link
             href="/login"
-            className="px-10 py-4 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold text-lg hover:shadow-xl hover:shadow-cyan-500/25 transition-all inline-flex items-center gap-2"
+            className="mt-8 inline-flex items-center gap-2 rounded-xl bg-accent px-7 py-3.5 font-semibold text-accent-fg transition-colors hover:bg-accent-hover"
           >
-            Get Started Free
-            <ArrowRight className="w-5 h-5" />
+            Create your plan
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Link>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-800/50 py-8">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-slate-400 text-sm">
-            <Brain className="w-4 h-4 text-cyan-400" />
-            PathForge AI — Agentic AI for Human Potential
-          </div>    
+      <footer className="border-t border-line">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-6 py-8 sm:flex-row">
+          <p className="text-sm text-fg-subtle">
+            PathForge — a coding path built from your actual results.
+          </p>
+          <p className="text-sm text-fg-subtle">
+            Educational and portfolio project.
+          </p>
         </div>
       </footer>
     </div>
